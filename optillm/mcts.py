@@ -114,7 +114,7 @@ class MCTS:
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
-            max_tokens=4096,
+            max_tokens=2048, # Lowered for testing as the max context length of Qwen/Qwen2.5-Math-1.5B-Instruct is 4096 tokens
             n=n,
             temperature=1
         )
