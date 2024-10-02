@@ -82,16 +82,19 @@ async def generate_dataset(dataset_name: str, output_file: str, **kwargs):
     
     process_kwargs = {k: v for k, v in kwargs.items() if k not in ["dataset_name", "dataset_split", "output_file"]}
 
+    # List to store the coroutine for each sample
+    tasks = [process_sample(sample, **process_kwargs) for sample in dataset]
+
     with open(f"data/{output_file}", "w") as f:
-        for sample in tqdm(dataset):
-            result = await process_sample(sample, **process_kwargs)
+        # Use asyncio.gather to process all samples concurrently
+        for result in tqdm(await asyncio.gather(*tasks)):
             f.write(json.dumps(result) + "\n")
 
     # Push to hub
     if kwargs.get("push_to_hub", True) and kwargs.get("hub_dataset_id") is not None:
         results_ds = load_dataset("json", data_files=f"data/{output_file}", split="train")
         dataset = dataset.add_column("optillm_completions", results_ds["results"])
-        dataset.push_to_hub(kwargs.get("hub_dataset_id"))
+        dataset.push_to_hub(kwargs.get("hub_dataset_id"), private=True)
 
 def main():
     parser = argparse.ArgumentParser(description="Generate OptILM dataset")
