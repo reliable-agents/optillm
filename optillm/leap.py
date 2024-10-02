@@ -1,7 +1,7 @@
 import json
 import logging
 import re
-from typing import List, Tuple
+
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -21,7 +21,7 @@ class LEAP:
         match = re.search(r"<output>(.*?)(?:</output>|$)", text, re.DOTALL)
         return match.group(1).strip() if match else ""
 
-    def extract_examples_from_query(self, initial_query: str) -> List[Tuple[str, str]]:
+    def extract_examples_from_query(self, initial_query: str) -> list[tuple[str, str]]:
         logger.info("Extracting examples from initial query")
         response = self.client.chat.completions.create(
             model=self.model,
@@ -67,7 +67,7 @@ class LEAP:
         logger.debug(f"Extracted examples: {examples}")
         return examples
 
-    def generate_mistakes(self, examples: List[Tuple[str, str]]) -> List[Tuple[str, str, str, str]]:
+    def generate_mistakes(self, examples: list[tuple[str, str]]) -> list[tuple[str, str, str, str]]:
         logger.info("Generating mistakes for given examples")
         mistakes = []
         for question, correct_answer in examples:
@@ -96,7 +96,7 @@ class LEAP:
                 mistakes.append((question, generated_reasoning, generated_answer, correct_answer))
         return mistakes
 
-    def generate_low_level_principles(self, mistakes: List[Tuple[str, str, str, str]]) -> List[str]:
+    def generate_low_level_principles(self, mistakes: list[tuple[str, str, str, str]]) -> list[str]:
         logger.info("Generating low-level principles from mistakes")
         for question, generated_reasoning, generated_answer, correct_answer in mistakes:
             response = self.client.chat.completions.create(
@@ -127,7 +127,7 @@ class LEAP:
             self.low_level_principles.append(self.extract_output(response.choices[0].message.content))
         return self.low_level_principles
 
-    def generate_high_level_principles(self) -> List[str]:
+    def generate_high_level_principles(self) -> list[str]:
         logger.info("Generating high-level principles from low-level principles")
         principles_text = "\n".join(self.low_level_principles)
         response = self.client.chat.completions.create(

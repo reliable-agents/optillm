@@ -3,7 +3,7 @@ import logging
 import math
 import random
 import re
-from typing import List, Tuple
+
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -15,7 +15,7 @@ class Node:
         self.state = state
         self.action = action
         self.parent = parent
-        self.children: List[Node] = []
+        self.children: list[Node] = []
         self.visits = 0
         self.value = 0.0
 
@@ -59,7 +59,7 @@ class RStar:
         logger.debug(f"Simulation complete. Final value: {value}")
         return value
 
-    async def mcts_async(self, root_state: str) -> List[Node]:
+    async def mcts_async(self, root_state: str) -> list[Node]:
         root = Node(root_state, None)
         tasks = []
         for _ in range(self.num_rollouts):
@@ -110,7 +110,7 @@ class RStar:
         logger.debug(f"Generated response: {generated_response}")
         return generated_response
 
-    def select_action(self, node: Node) -> Tuple[Node, str]:
+    def select_action(self, node: Node) -> tuple[Node, str]:
         if not node.children:
             action = random.choice(self.actions)
             logger.debug(f"Selected random action: {action}")
@@ -159,7 +159,7 @@ class RStar:
             node = node.parent
         logger.debug("Backpropagation complete")
 
-    def mcts(self, root_state: str) -> List[Node]:
+    def mcts(self, root_state: str) -> list[Node]:
         root = Node(root_state, None)
         logger.debug(f"Starting MCTS with {self.num_rollouts} rollouts")
         for i in range(self.num_rollouts):
@@ -175,7 +175,7 @@ class RStar:
         logger.debug("MCTS complete")
         return self.extract_trajectories(root)
 
-    def extract_trajectories(self, root: Node) -> List[List[Node]]:
+    def extract_trajectories(self, root: Node) -> list[list[Node]]:
         logger.debug("Extracting trajectories")
         trajectories = []
         stack = [(root, [])]
@@ -189,7 +189,7 @@ class RStar:
         logger.debug(f"Extracted {len(trajectories)} trajectories")
         return trajectories
 
-    def mutual_consistency(self, trajectory: List[Node]) -> bool:
+    def mutual_consistency(self, trajectory: list[Node]) -> bool:
         split_index = random.randint(1, len(trajectory) - 1)
         partial_trajectory = trajectory[:split_index]
         prompt = self.create_discriminator_prompt(partial_trajectory)
@@ -198,7 +198,7 @@ class RStar:
         logger.debug(f"Mutual consistency check: {'Passed' if is_consistent else 'Failed'}")
         return is_consistent
 
-    def select_final_trajectory(self, trajectories: List[List[Node]]) -> List[Node]:
+    def select_final_trajectory(self, trajectories: list[list[Node]]) -> list[Node]:
         logger.debug("Selecting final trajectory")
         valid_trajectories = [t for t in trajectories if self.mutual_consistency(t)]
         logger.debug(f"Found {len(valid_trajectories)} valid trajectories")
@@ -207,7 +207,7 @@ class RStar:
             return max(trajectories, key=lambda t: self.trajectory_score(t))
         return max(valid_trajectories, key=lambda t: self.trajectory_score(t))
 
-    def trajectory_score(self, trajectory: List[Node]) -> float:
+    def trajectory_score(self, trajectory: list[Node]) -> float:
         if not trajectory:
             return float("-inf")
         last_node = trajectory[-1]
@@ -215,7 +215,7 @@ class RStar:
             return last_node.value  # Return just the value if visits is zero
         return last_node.value / last_node.visits
 
-    def select_best_answer(self, answers: List[Tuple[str, float]]) -> str:
+    def select_best_answer(self, answers: list[tuple[str, float]]) -> str:
         valid_answers = [(answer, conf) for answer, conf in answers if answer]
         if not valid_answers:
             return "Unable to determine a valid answer."
@@ -266,12 +266,12 @@ This rephrasing should help clarify the problem and guide the solution process."
         logger.debug(f"Created prompt for action {action}: {prompt}")
         return prompt
 
-    def create_discriminator_prompt(self, partial_trajectory: List[Node]) -> str:
+    def create_discriminator_prompt(self, partial_trajectory: list[Node]) -> str:
         states = [node.state for node in partial_trajectory]
         partial_reasoning = " ".join(states)
         return f"Given the partial reasoning:\n{partial_reasoning}\nComplete the reasoning to solve the problem:"
 
-    def compare_completions(self, completion: str, remaining_trajectory: List[Node]) -> bool:
+    def compare_completions(self, completion: str, remaining_trajectory: list[Node]) -> bool:
         remaining_states = [node.state for node in remaining_trajectory]
         remaining_reasoning = " ".join(remaining_states)
 
@@ -299,7 +299,7 @@ This rephrasing should help clarify the problem and guide the solution process."
             logger.debug(f"Evaluated node. Answer: {answer}, Confidence: {confidence}, Value: 0.0")
             return 0.0  # If it's not a valid number, return a low score
 
-    def extract_answer(self, final_state: str) -> Tuple[str, float]:
+    def extract_answer(self, final_state: str) -> tuple[str, float]:
         logger.debug(f"Extracting answer from state: {final_state}")
         patterns = [
             r"The answer is (\d+)",

@@ -1,5 +1,5 @@
 import logging
-from typing import List, Tuple
+
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +11,7 @@ class PlanSearch:
         self.model = model
         self.plansearch_completion_tokens = 0
 
-    def generate_observations(self, problem: str, num_observations: int = 3) -> List[str]:
+    def generate_observations(self, problem: str, num_observations: int = 3) -> list[str]:
         prompt = f"""You are an expert Python programmer. You will be given a competitive programming question
 (problem specification). You will return several useful, non-obvious, and correct observations
 about the problem, like hints to solve the problem. You will NOT return any code. Be as
@@ -32,8 +32,8 @@ Please provide {num_observations} observations."""
         return [obs.strip() for obs in observations if obs.strip()]
 
     def generate_derived_observations(
-        self, problem: str, observations: List[str], num_new_observations: int = 2
-    ) -> List[str]:
+        self, problem: str, observations: list[str], num_new_observations: int = 2
+    ) -> list[str]:
         prompt = f"""You are an expert Python programmer. You will be given a competitive programming question
 (problem specification) and several correct observations about the problem.
 You will brainstorm several new, useful, and correct observations about the problem, derived
@@ -57,7 +57,7 @@ Please provide {num_new_observations} new observations derived from the existing
         new_observations = response.choices[0].message.content.strip().split("\n")
         return [obs.strip() for obs in new_observations if obs.strip()]
 
-    def generate_solution(self, problem: str, observations: List[str]) -> str:
+    def generate_solution(self, problem: str, observations: list[str]) -> str:
         prompt = f"""Here is the competitive programming problem:
 {problem}
 
@@ -102,7 +102,7 @@ Please implement the solution in Python."""
 
     def solve(
         self, problem: str, num_initial_observations: int = 3, num_derived_observations: int = 2
-    ) -> Tuple[str, str]:
+    ) -> tuple[str, str]:
         logger.info("Generating initial observations")
         initial_observations = self.generate_observations(problem, num_initial_observations)
 
@@ -123,7 +123,7 @@ Please implement the solution in Python."""
 
     def solve_multiple(
         self, problem: str, n: int, num_initial_observations: int = 3, num_derived_observations: int = 2
-    ) -> List[str]:
+    ) -> list[str]:
         solutions = []
         for _ in range(n):
             _, python_implementation = self.solve(problem, num_initial_observations, num_derived_observations)
@@ -131,6 +131,6 @@ Please implement the solution in Python."""
         return solutions
 
 
-def plansearch(system_prompt: str, initial_query: str, client, model: str, n: int = 1) -> List[str]:
+def plansearch(system_prompt: str, initial_query: str, client, model: str, n: int = 1) -> list[str]:
     planner = PlanSearch(system_prompt, client, model)
     return planner.solve_multiple(initial_query, n), planner.plansearch_completion_tokens

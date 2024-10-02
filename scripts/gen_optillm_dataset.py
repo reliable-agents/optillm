@@ -2,13 +2,14 @@ import argparse
 import asyncio
 import json
 import random
-from typing import Any, Dict, List
+from typing import Any
 
 from datasets import load_dataset
 from openai import AsyncOpenAI
 from tqdm import tqdm
 
 from optillm.server_context import ProxyServer, ServerContext, VLLMServer
+
 
 # OptILM approaches
 APPROACHES = [
@@ -28,7 +29,7 @@ APPROACHES = [
 ]
 
 
-async def generate_response(prompt: str, **kwargs) -> Dict[str, Any]:
+async def generate_response(prompt: str, **kwargs) -> dict[str, Any]:
     """Generate a response using the specified approach."""
     approach = kwargs.get("approach", "none")
     temperature = kwargs.get("temperature", 0.0)
@@ -57,7 +58,7 @@ async def generate_response(prompt: str, **kwargs) -> Dict[str, Any]:
         }
 
 
-async def rank_responses(prompt: str, responses: List[Dict[str, Any]]) -> List[int]:
+async def rank_responses(prompt: str, responses: list[dict[str, Any]]) -> list[int]:
     """Rank the responses using the LLM."""
     ranking_prompt = f"Given the following prompt:\n\n{prompt}\n\nRank the following responses from best to worst, considering accuracy, completeness, and relevance. Provide the ranking as a comma-separated list of indices (0-indexed). Do not add any explanations or any other text other than the comma-separated list.\n\n"
     for i, response in enumerate(responses):
@@ -72,7 +73,7 @@ async def rank_responses(prompt: str, responses: List[Dict[str, Any]]) -> List[i
     return [int(idx) for idx in ranking_str.split(",")]
 
 
-async def process_sample(sample: Dict[str, Any], **kwargs) -> Dict[str, Any]:
+async def process_sample(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
     """Process a single sample from the dataset."""
     prompt = sample[kwargs["prompt_column"]]
     approach = kwargs["approach"]

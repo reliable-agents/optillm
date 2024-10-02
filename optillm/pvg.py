@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import List, Tuple
+
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ def generate_solutions(
     num_solutions: int,
     is_sneaky: bool = False,
     temperature: float = 0.7,
-) -> List[str]:
+) -> list[str]:
     global pvg_completion_tokens
     role = "sneaky" if is_sneaky else "helpful"
     logger.info(f"Generating {num_solutions} {role} solutions")
@@ -52,7 +52,7 @@ def generate_solutions(
     return solutions
 
 
-def verify_solutions(client, system_prompt: str, initial_query: str, solutions: List[str], model: str) -> List[float]:
+def verify_solutions(client, system_prompt: str, initial_query: str, solutions: list[str], model: str) -> list[float]:
     global pvg_completion_tokens
     logger.info(f"Verifying {len(solutions)} solutions")
     verify_prompt = f"""{system_prompt}
@@ -117,7 +117,7 @@ Ensure that the Score is a single number between 0 and 10, and the Explanation i
     return scores
 
 
-def extract_answer(final_state: str) -> Tuple[str, float]:
+def extract_answer(final_state: str) -> tuple[str, float]:
     logger.debug(f"Extracting answer from state: {final_state}")
     patterns = [
         r"The answer is (\d+)",
@@ -171,7 +171,7 @@ def inference_time_pv_game(
 
         scores = verify_solutions(client, system_prompt, initial_query, all_solutions, model)
 
-        round_best_solution = max(zip(all_solutions, scores), key=lambda x: x[1])
+        round_best_solution = max(zip(all_solutions, scores, strict=False), key=lambda x: x[1])
 
         if round_best_solution[1] > best_score:
             best_solution = round_best_solution[0]

@@ -4,7 +4,6 @@ import logging
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Dict, List
 
 from openai import OpenAI
 
@@ -20,6 +19,7 @@ from optillm.rstar import RStar
 from optillm.rto import round_trip_optimization
 from optillm.self_consistency import advanced_self_consistency_approach
 from optillm.z3_solver import Z3SolverSystem
+
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -58,12 +58,12 @@ APPROACHES = {
 }
 
 
-def load_test_cases(file_path: str) -> List[Dict]:
+def load_test_cases(file_path: str) -> list[dict]:
     with open(file_path) as f:
         return json.load(f)
 
 
-def run_approach(approach_name: str, system_prompt: str, query: str, client, model: str) -> Dict:
+def run_approach(approach_name: str, system_prompt: str, query: str, client, model: str) -> dict:
     start_time = time.time()
     try:
         approach_func = APPROACHES[approach_name]
@@ -76,7 +76,7 @@ def run_approach(approach_name: str, system_prompt: str, query: str, client, mod
         return {"approach": approach_name, "result": str(e), "time": end_time - start_time, "status": "error"}
 
 
-def run_test_case(test_case: Dict, approaches: List[str], client, model: str) -> Dict:
+def run_test_case(test_case: dict, approaches: list[str], client, model: str) -> dict:
     system_prompt = test_case["system_prompt"]
     query = test_case["query"]
     results = []
@@ -93,8 +93,8 @@ def run_test_case(test_case: Dict, approaches: List[str], client, model: str) ->
 
 
 def run_tests(
-    test_cases: List[Dict], approaches: List[str], client, model: str, single_test_name: str = None
-) -> List[Dict]:
+    test_cases: list[dict], approaches: list[str], client, model: str, single_test_name: str = None
+) -> list[dict]:
     results = []
     for test_case in test_cases:
         if single_test_name is None or test_case["name"] == single_test_name:
@@ -106,7 +106,7 @@ def run_tests(
     return results
 
 
-def print_summary(results: List[Dict]):
+def print_summary(results: list[dict]):
     print("\n=== Test Results Summary ===")
     for test_result in results:
         print(f"\nTest Case: {test_result['test_case']['name']}")

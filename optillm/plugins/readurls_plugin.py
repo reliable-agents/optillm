@@ -1,14 +1,14 @@
 import re
-from typing import List, Tuple
 from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
 
+
 SLUG = "readurls"
 
 
-def extract_urls(text: str) -> List[str]:
+def extract_urls(text: str) -> list[str]:
     # Updated regex pattern to be more precise
     url_pattern = re.compile(r'https?://[^\s\'"]+')
 
@@ -71,7 +71,7 @@ def fetch_webpage_content(url: str, max_length: int = 40000) -> str:
         return f"Error fetching content: {str(e)}"
 
 
-def run(system_prompt, initial_query: str, client=None, model=None) -> Tuple[str, int]:
+def run(system_prompt, initial_query: str, client=None, model=None) -> tuple[str, int]:
     urls = extract_urls(initial_query)
     # print(urls)
     modified_query = initial_query

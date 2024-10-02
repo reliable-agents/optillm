@@ -6,7 +6,7 @@ import math
 import multiprocessing
 import re
 import traceback
-from typing import Any, Dict
+from typing import Any
 
 from z3 import *
 
@@ -184,7 +184,7 @@ Analysis:
         self.z3_completion_tokens = analysis_response.usage.completion_tokens
         return analysis_response.choices[0].message.content
 
-    def generate_response(self, query: str, analysis: str, solver_result: Dict[str, Any]) -> str:
+    def generate_response(self, query: str, analysis: str, solver_result: dict[str, Any]) -> str:
         if solver_result.get("status") != "success":
             return self.standard_llm_inference(query)
 
@@ -226,7 +226,7 @@ Response:
             return formulation.group(1).strip()
         raise ValueError("No valid Z3 formulation found in the analysis.")
 
-    def solve_with_z3(self, formulation: str, max_attempts: int = 3) -> Dict[str, Any]:
+    def solve_with_z3(self, formulation: str, max_attempts: int = 3) -> dict[str, Any]:
         for attempt in range(max_attempts):
             output = self.execute_solver_code(formulation)
             if "Error:" not in output:

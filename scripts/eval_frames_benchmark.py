@@ -1,17 +1,17 @@
 import argparse
 import json
 import time
-from typing import Dict, List
 
 from datasets import load_dataset
 from openai import OpenAI
 from tqdm import tqdm
 
+
 client = OpenAI(api_key="none", base_url="http://localhost:8000/v1")
 SLEEP_INTERVAL = 60
 
 
-def load_existing_results(filename: str) -> List[Dict]:
+def load_existing_results(filename: str) -> list[dict]:
     try:
         with open(filename) as f:
             return json.load(f)
@@ -19,20 +19,20 @@ def load_existing_results(filename: str) -> List[Dict]:
         return []
 
 
-def save_result(filename: str, result: Dict):
+def save_result(filename: str, result: dict):
     results = load_existing_results(filename)
     results.append(result)
     with open(filename, "w") as f:
         json.dump(results, f, indent=2)
 
 
-def get_last_processed_index(results: List[Dict]) -> int:
+def get_last_processed_index(results: list[dict]) -> int:
     if not results:
         return -1
     return max(int(r.get("index", -1)) for r in results)
 
 
-def generate_llm_prompt(prompt: str, wiki_links: List[str]) -> str:
+def generate_llm_prompt(prompt: str, wiki_links: list[str]) -> str:
     return f"Here are the relevant Wikipedia articles:\n{wiki_links}\n\nBased on all the information, answer the query. \n\nQuery: {prompt}\n\n"
 
 
@@ -48,7 +48,7 @@ def get_llm_response(prompt: str, model: str) -> str:
     return response.choices[0].message.content.strip()
 
 
-def evaluate_response(question: str, llm_response: str, ground_truth: str, model: str) -> Dict[str, str]:
+def evaluate_response(question: str, llm_response: str, ground_truth: str, model: str) -> dict[str, str]:
     evaluation_prompt = f"""===Task===
 I need your help in evaluating an answer provided by an LLM against a ground
 truth answer. Your task is to determine if the ground truth answer is present in the LLM's

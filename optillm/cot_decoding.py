@@ -1,5 +1,3 @@
-from typing import Dict, List, Tuple
-
 import torch
 from transformers import PreTrainedModel, PreTrainedTokenizer
 
@@ -11,7 +9,7 @@ def get_device():
         return torch.device("cpu")
 
 
-def calculate_confidence(logits: List[torch.Tensor], answer_ids: torch.Tensor) -> float:
+def calculate_confidence(logits: list[torch.Tensor], answer_ids: torch.Tensor) -> float:
     """
     Calculate the confidence score (Δ) as specified in the paper.
 
@@ -42,7 +40,7 @@ def calculate_confidence(logits: List[torch.Tensor], answer_ids: torch.Tensor) -
     return confidence_sum / valid_tokens if valid_tokens > 0 else 0.0
 
 
-def aggregate_paths_based_on_scores(paths: List[Tuple[str, float]]) -> Tuple[str, float]:
+def aggregate_paths_based_on_scores(paths: list[tuple[str, float]]) -> tuple[str, float]:
     """Aggregate multiple paths based on their confidence scores."""
     answer_scores = {}
     for answer, delta in paths:
@@ -54,7 +52,7 @@ def aggregate_paths_based_on_scores(paths: List[Tuple[str, float]]) -> Tuple[str
 def cot_decode(
     model: PreTrainedModel,
     tokenizer: PreTrainedTokenizer,
-    messages: List[Dict[str, str]],
+    messages: list[dict[str, str]],
     k: int = 10,
     num_beams: int = 1,
     max_new_tokens: int = 512,
@@ -65,7 +63,7 @@ def cot_decode(
     no_repeat_ngram_size: int = 0,
     early_stopping: bool = False,
     aggregate_paths: bool = False,
-) -> Tuple[str, float]:
+) -> tuple[str, float]:
     """
     Implement CoT-decoding for a given chat input.
 

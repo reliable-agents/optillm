@@ -28,6 +28,7 @@ from optillm.rto import round_trip_optimization
 from optillm.self_consistency import advanced_self_consistency_approach
 from optillm.z3_solver import Z3SolverSystem
 
+
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -215,7 +216,7 @@ async def execute_parallel_approaches(approaches, system_prompt, initial_query, 
 
     tasks = [run_approach(approach) for approach in approaches]
     results = await asyncio.gather(*tasks)
-    responses, tokens = zip(*results)
+    responses, tokens = zip(*results, strict=False)
     return list(responses), sum(tokens)
 
 

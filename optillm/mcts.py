@@ -1,15 +1,15 @@
 import logging
 import random
-from typing import Dict, List
 
 import networkx as nx
 import numpy as np
+
 
 logger = logging.getLogger(__name__)
 
 
 class DialogueState:
-    def __init__(self, system_prompt: str, conversation_history: List[Dict[str, str]], current_query: str):
+    def __init__(self, system_prompt: str, conversation_history: list[dict[str, str]], current_query: str):
         self.system_prompt = system_prompt
         self.conversation_history = conversation_history
         self.current_query = current_query
@@ -113,7 +113,7 @@ class MCTS:
         logger.debug(f"Search complete. Best child node: Visits: {best_child.visits}, Value: {best_child.value}")
         return best_child.state
 
-    def generate_actions(self, state: DialogueState) -> List[str]:
+    def generate_actions(self, state: DialogueState) -> list[str]:
         logger.debug("Generating actions for current state")
         messages = [{"role": "system", "content": state.system_prompt}]
         messages.extend(state.conversation_history)

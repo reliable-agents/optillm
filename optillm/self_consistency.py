@@ -1,6 +1,6 @@
 import logging
 from difflib import SequenceMatcher
-from typing import Dict, List
+
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +13,7 @@ class AdvancedSelfConsistency:
         self.similarity_threshold = similarity_threshold
         self.self_consistency_completion_tokens = 0
 
-    def generate_responses(self, system_prompt: str, user_prompt: str) -> List[str]:
+    def generate_responses(self, system_prompt: str, user_prompt: str) -> list[str]:
         responses = []
         for _ in range(self.num_samples):
             response = self.client.chat.completions.create(
@@ -29,7 +29,7 @@ class AdvancedSelfConsistency:
     def calculate_similarity(self, a: str, b: str) -> float:
         return SequenceMatcher(None, a, b).ratio()
 
-    def cluster_similar_responses(self, responses: List[str]) -> List[List[str]]:
+    def cluster_similar_responses(self, responses: list[str]) -> list[list[str]]:
         clusters = []
         for response in responses:
             added_to_cluster = False
@@ -42,7 +42,7 @@ class AdvancedSelfConsistency:
                 clusters.append([response])
         return clusters
 
-    def aggregate_results(self, responses: List[str]) -> Dict[str, any]:
+    def aggregate_results(self, responses: list[str]) -> dict[str, any]:
         final_answers = responses
         clusters = self.cluster_similar_responses(final_answers)
 
@@ -54,7 +54,7 @@ class AdvancedSelfConsistency:
 
         return {"clusters": cluster_info, "total_responses": len(responses), "num_unique_clusters": len(clusters)}
 
-    def evaluate(self, system_prompt: str, user_prompt: str) -> Dict[str, any]:
+    def evaluate(self, system_prompt: str, user_prompt: str) -> dict[str, any]:
         responses = self.generate_responses(system_prompt, user_prompt)
         aggregated_result = self.aggregate_results(responses)
 
