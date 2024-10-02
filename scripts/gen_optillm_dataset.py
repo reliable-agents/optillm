@@ -6,7 +6,7 @@ from datasets import load_dataset
 from openai import AsyncOpenAI
 from typing import List, Dict, Any
 import random
-
+from optillm.server_context import ServerContext, VLLMServer, ProxyServer
 # OptILM approaches
 APPROACHES = ["none", "mcts", "bon", "moa", "rto", "z3", "self_consistency", "pvg", "rstar", "cot_reflection", "plansearch", "leap", "re2"]
 
@@ -28,7 +28,7 @@ async def generate_response(prompt: str, **kwargs) -> Dict[str, Any]:
         }
     else:
         # Use OptILM with the specified approach
-        client = AsyncOpenAI(api_key="none", base_url="http://localhost:8000/v1")
+        client = AsyncOpenAI(api_key="none", base_url="http://localhost:8080/v1")
         response = await client.chat.completions.create(
             model=f"{approach}-{kwargs['model']}",  # Assuming OptILM uses this naming convention
             messages=[{"role": "user", "content": prompt}],
@@ -103,13 +103,16 @@ def main():
     parser.add_argument("--num_completions_per_prompt", type=int, default=1, help="Number of completions per prompt")
     parser.add_argument("--temperature", type=float, default=0., help="Temperature for sampling")
     parser.add_argument("--output_file", type=str, default="optillm_dataset.jsonl", help="Output file path")
-    parser.add_argument("--model", type=str, default="gpt-4o-mini", help="Model name")
+    parser.add_argument("--model", type=str, default="Qwen/Qwen2.5-Math-1.5B-Instruct", help="Model name")
     parser.add_argument("--hub_dataset_id", type=str, default=None, help="Hugging Face dataset ID to push results to")
     parser.add_argument("--push_to_hub", action="store_true", help="Push results to Hugging Face dataset")
     args = parser.parse_args()
 
-    asyncio.run(generate_dataset(**vars(args)))
-    print(f"Dataset generated and saved to {args.output_file}")
+    with ServerContext(VLLMServer, dict(model_path=args.model)) as vllm_server:
+        vllm_server.wait()
+        with ServerContext(ProxyServer, dict(model_path=args.model, approach=args.approach)) as proxy_server:
+            proxy_server.wait()
+            asyncio.run(generate_dataset(**vars(args)))
 
 if __name__ == "__main__":
     main()
