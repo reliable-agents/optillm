@@ -1,5 +1,8 @@
 # optillm
 
+> [!NOTE]
+> This fork includes tighter integration with vLLM and better support for generating synthetic preferences from models on the Hugging Face Hub.
+
 optillm is an OpenAI API compatible optimizing inference proxy which implements several state-of-the-art techniques that can improve the accuracy and performance of LLMs. The current focus is on implementing techniques that improve reasoning over coding, logical and mathematical queries. It is possible to beat the frontier models using these techniques across diverse tasks by doing additional compute at inference time.
 
 [![Open in Spaces](https://huggingface.co/datasets/huggingface/badges/resolve/main/open-in-hf-spaces-sm.svg)](https://huggingface.co/spaces/codelion/optillm)
@@ -42,7 +45,7 @@ Note that the server defaults can be overriden when the proxy is spun up as foll
 python optillm.py --approach mcts --return-full-response true
 ```
 
-### Starting the optillm proxy for a local server (e.g. llama.cpp)
+### Starting the optillm proxy for a local server (e.g. llama.cpp, vLLM, etc)
 
 - Set the `OPENAI_API_KEY` env variable to a placeholder value
   - e.g. `export OPENAI_API_KEY="no_key"`
@@ -58,7 +61,7 @@ python optillm.py --approach mcts --return-full-response true
 > [!NOTE]
 > You'll later need to specify a model name in the OpenAI client configuration. Since llama-server was started with a single model, you can choose any name you want.
 
-To start the proxy with `vllm`, first spin up the OpenAI-compatible server with:
+To use the proxy with vLLM, first spin up the OpenAI-compatible server with:
 
 ```shell
 vllm serve {MODEL_NAME}
@@ -68,6 +71,16 @@ Then run:
 
 ```shell
 python optillm.py --base_url http://localhost:8000/v1
+```
+
+We also provide context managers for the vLLM server and optillm proxy, so you can run them directly in Python as follows:
+
+```python
+with ServerContext(VLLMServer, dict(model_path=args.model)) as vllm_server:
+    vllm_server.wait()
+    with ServerContext(ProxyServer, dict(model_path=args.model, approach=args.approach)) as proxy_server:
+        proxy_server.wait()
+        run_task(...) # Placeholder for real task
 ```
 
 ## Usage
@@ -165,35 +178,21 @@ or your own code where you want to use the results from optillm. You can use it 
 
 ### Generate a synthetic dataset
 
-To generate a synthetic dataset with `otillm`, first spin up the proxy to return the full reasoning trace
+To generate a synthetic dataset with optillm and vLLM, run the following:
 
 ```shell
-python optillm.py --return-full-response true
+python generate_dataset.py --approach mcts --num_samples 5
 ```
 
-Then run the following:
-
-```shell
-python scripts/gen_optillm_dataset.py --dataset AI-MO/NuminaMath-CoT --prompt_column problem --approach cot_reflection --num_samples 5
-```
-
-By default this generates one completion per prompt with `gpt-4o-mini` and the outputs will be saved to `data/optillm_dataset.jsonl`. If you want to generate multiple completions per propmt (e.g. for preference modelling), then run:
+By default, this generates _one completion per prompt_ and the outputs will be saved to `data/optillm_dataset.jsonl`. If you want to generate multiple completions per prompt (e.g. for preference modelling), run:
 
 ```shell
 python scripts/gen_optillm_dataset.py --dataset AI-MO/NuminaMath-CoT --prompt_column problem --approach cot_reflection --temperature 0.9 --num_completions_per_prompt 3 --num_samples 5 
 ```
 
-If you're running a local vLLM server, you will need to align the served model name with `{approach}-local` in the script. E.g. first run:
+> [!NOTE]
+> This fork includes tighter integration with vLLM and better support for generating synthetic preferences from models on the Hugging Face Hub.
 
-```shell
-vllm serve Qwen/Qwen2.5-Math-1.5B-Instruct --served-model-name cot_reflection-local
-```
-
-Then, assuming the optillm proxy is running, run:
-
-```shell
-python scripts/gen_optillm_dataset.py --num_samples 1 --approach cot_reflection --model local
-```
 
 ## Implemented techniques
 

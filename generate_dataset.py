@@ -31,8 +31,9 @@ APPROACHES = [
 
 async def generate_response(prompt: str, **kwargs) -> dict[str, Any]:
     """Generate a response using the specified approach."""
-    approach = kwargs.get("approach", "none")
-    temperature = kwargs.get("temperature", 0.0)
+    approach = kwargs["approach"]
+    temperature = kwargs["temperature"]
+    max_tokens = kwargs["max_tokens"]
     if approach == "none":
         # Use the base model without any optimization technique
         client = AsyncOpenAI()
@@ -40,6 +41,7 @@ async def generate_response(prompt: str, **kwargs) -> dict[str, Any]:
             model=kwargs["model"],
             messages=[{"role": "user", "content": prompt}],
             temperature=temperature,
+            max_tokens=max_tokens,
         )
         return {
             "content": response.choices[0].message.content,
@@ -51,7 +53,10 @@ async def generate_response(prompt: str, **kwargs) -> dict[str, Any]:
         response = await client.chat.completions.create(
             model=f"{approach}-{kwargs['model']}",  # Assuming OptILM uses this naming convention
             messages=[{"role": "user", "content": prompt}],
+            max_tokens=max_tokens,
+            n=4
         )
+        print(response.choices)
         return {
             "content": response.choices[0].message.content,
             "tokens": response.usage.completion_tokens,
@@ -60,7 +65,7 @@ async def generate_response(prompt: str, **kwargs) -> dict[str, Any]:
 
 async def rank_responses(prompt: str, responses: list[dict[str, Any]]) -> list[int]:
     """Rank the responses using the LLM."""
-    ranking_prompt = f"Given the following prompt:\n\n{prompt}\n\nRank the following responses from best to worst, considering accuracy, completeness, and relevance. Provide the ranking as a comma-separated list of indices (0-indexed). Do not add any explanations or any other text other than the comma-separated list.\n\n"
+    ranking_prompt = f"Given the following prompt:\n\n{prompt}\n\nRank the following {len(responses)} responses from best to worst, considering accuracy, completeness, and relevance. Provide the ranking as a comma-separated list of indices (0-indexed). Do not add any explanations or any other text other than the comma-separated list.\n\n"
     for i, response in enumerate(responses):
         ranking_prompt += f"Response {i}:\n{response['content']}\n\n"
     client = AsyncOpenAI()
@@ -81,7 +86,7 @@ async def process_sample(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
 
     for _ in range(kwargs["num_completions_per_prompt"]):
         response = await generate_response(
-            prompt, model=kwargs["model"], approach=approach, temperature=kwargs["temperature"]
+            prompt, **kwargs
         )
         results.append({"approach": approach, **response})
 
@@ -90,6 +95,8 @@ async def process_sample(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
     rankings = await rank_responses(prompt, results)
 
     # Add rankings to results
+    if len(rankings) != len(results):
+        raise ValueError(f"Number of rankings does not match number of results. Got {len(rankings)} rankings and {len(results)} results.")
     for rank, idx in enumerate(rankings):
         results[idx]["rank"] = rank
 
@@ -124,12 +131,13 @@ async def generate_dataset(dataset_name: str, output_file: str, **kwargs):
 def main():
     parser = argparse.ArgumentParser(description="Generate OptILM dataset")
     parser.add_argument("--approach", type=str, default="mcts", help="optillm approach")
-    parser.add_argument("--dataset_name", type=str, default="AI-MO/NuminaMath-CoT", help="Dataset name")
+    parser.add_argument("--dataset_name", type=str, default="AI-MO/NuminaMath-TIR", help="Dataset name")
     parser.add_argument("--dataset_split", type=str, default="train", help="Dataset split")
     parser.add_argument("--prompt_column", type=str, default="problem", help="Column name for the prompt")
-    parser.add_argument("--num_samples", type=int, default=100, help="Number of samples to process")
+    parser.add_argument("--num_samples", type=int, default=None, help="Number of samples to process")
     parser.add_argument("--num_completions_per_prompt", type=int, default=1, help="Number of completions per prompt")
-    parser.add_argument("--temperature", type=float, default=0.0, help="Temperature for sampling")
+    parser.add_argument("--temperature", type=float, default=0.7, help="Temperature for sampling")
+    parser.add_argument("--max_tokens", type=int, default=2048, help="Maximum number of tokens for completions")
     parser.add_argument("--output_file", type=str, default="optillm_dataset.jsonl", help="Output file path")
     parser.add_argument("--model", type=str, default="Qwen/Qwen2.5-Math-1.5B-Instruct", help="Model name")
     parser.add_argument("--hub_dataset_id", type=str, default=None, help="Hugging Face dataset ID to push results to")
