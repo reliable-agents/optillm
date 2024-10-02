@@ -1,6 +1,8 @@
-from collections import deque
-import tiktoken
 import re
+from collections import deque
+
+import tiktoken
+
 
 class WiMInfiniteContextAPI:
     def __init__(self, system_prompt, client, model, max_context_tokens=64000, max_margins=10, chunk_size=16000):
@@ -11,7 +13,7 @@ class WiMInfiniteContextAPI:
         self.context_buffer = deque()
         self.margins = deque(maxlen=max_margins)
         try:
-            self.tokenizer = tiktoken.encoding_for_model(model) 
+            self.tokenizer = tiktoken.encoding_for_model(model)
         except:
             self.tokenizer = tiktoken.get_encoding("o200k_base")
         self.system_message = system_prompt
@@ -28,7 +30,9 @@ class WiMInfiniteContextAPI:
     def generate_margin(self, chunk, query):
         messages = [
             {"role": "system", "content": self.system_message},
-            {"role": "user", "content": f"""
+            {
+                "role": "user",
+                "content": f"""
 '''text
 {chunk}
 '''
@@ -42,27 +46,24 @@ Here are rules:
 Example answers:
 - YES#Western philosophy originated in Ancient Greece in the 6th century BCE with the pre-Socratics.
 - NO#No relevant context.
-"""}
+""",
+            },
         ]
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            max_tokens = 512
-        )
+        response = self.client.chat.completions.create(model=self.model, messages=messages, max_tokens=512)
         self.win_completion_tokens += response.usage.completion_tokens
         return response.choices[0].message.content
 
     def classify_margin(self, margin):
         return margin.startswith("YES#")
-    
+
     def extract_query(self, text):
         # Split the text into sentences
-        sentences = re.split(r'(?<=[.!?])\s+', text)
-        
+        sentences = re.split(r"(?<=[.!?])\s+", text)
+
         # Check if the last sentence starts with "Query:"
         if sentences[-1].startswith("Query:"):
             return sentences[-1][6:].strip(), "".join(sentences[:-1])
-        
+
         # If not, assume the last sentence is the query
         return sentences[-1].strip(), "".join(sentences[:-1])
 
@@ -82,7 +83,9 @@ Example answers:
         margins = "\n".join(self.margins)
         messages = [
             {"role": "system", "content": self.system_message},
-            {"role": "user", "content": f"""
+            {
+                "role": "user",
+                "content": f"""
 '''text
 {context}
 '''
@@ -93,12 +96,10 @@ I asked my assistant to read and analyse the above content page by page to help 
 Read again the note(s) and the provided content, take a deep breath and answer the query.
 {self.instruction}
 {query}
-"""}
+""",
+            },
         ]
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=messages
-        )
+        response = self.client.chat.completions.create(model=self.model, messages=messages)
         self.win_completion_tokens += response.usage.completion_tokens
         return response.choices[0].message.content
 
@@ -113,7 +114,7 @@ Read again the note(s) and the provided content, take a deep breath and answer t
     # Usage
     def text_stream_generator(self, text):
         for i in range(0, len(text), self.chunk_size):
-            yield text[i:i+self.chunk_size]
+            yield text[i : i + self.chunk_size]
 
     def process_query(self, initial_query):
         query, context = self.extract_query(initial_query)

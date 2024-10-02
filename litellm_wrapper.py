@@ -1,10 +1,9 @@
-import os
-import litellm
+
 from litellm import completion
-from typing import List, Dict, Any, Optional
+
 
 class LiteLLMWrapper:
-    def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None):
+    def __init__(self, api_key: str | None = None, base_url: str | None = None):
         self.api_key = api_key
         self.base_url = base_url
         self.chat = self.Chat()
@@ -13,7 +12,7 @@ class LiteLLMWrapper:
     class Chat:
         class Completions:
             @staticmethod
-            def create(model: str, messages: List[Dict[str, str]], **kwargs):
+            def create(model: str, messages: list[dict[str, str]], **kwargs):
                 response = completion(model=model, messages=messages, **kwargs)
                 # Convert LiteLLM response to match OpenAI response structure
                 return response

@@ -1,19 +1,38 @@
-import json
 import argparse
 import asyncio
-from tqdm import tqdm
+import json
+import random
+from typing import Any
+
 from datasets import load_dataset
 from openai import AsyncOpenAI
-from typing import List, Dict, Any
-import random
-from optillm.server_context import ServerContext, VLLMServer, ProxyServer
-# OptILM approaches
-APPROACHES = ["none", "mcts", "bon", "moa", "rto", "z3", "self_consistency", "pvg", "rstar", "cot_reflection", "plansearch", "leap", "re2"]
+from tqdm import tqdm
 
-async def generate_response(prompt: str, **kwargs) -> Dict[str, Any]:
+from optillm.server_context import ProxyServer, ServerContext, VLLMServer
+
+
+# OptILM approaches
+APPROACHES = [
+    "none",
+    "mcts",
+    "bon",
+    "moa",
+    "rto",
+    "z3",
+    "self_consistency",
+    "pvg",
+    "rstar",
+    "cot_reflection",
+    "plansearch",
+    "leap",
+    "re2",
+]
+
+
+async def generate_response(prompt: str, **kwargs) -> dict[str, Any]:
     """Generate a response using the specified approach."""
     approach = kwargs.get("approach", "none")
-    temperature = kwargs.get("temperature", 0.)
+    temperature = kwargs.get("temperature", 0.0)
     if approach == "none":
         # Use the base model without any optimization technique
         client = AsyncOpenAI()
@@ -38,7 +57,8 @@ async def generate_response(prompt: str, **kwargs) -> Dict[str, Any]:
             "tokens": response.usage.completion_tokens,
         }
 
-async def rank_responses(prompt: str, responses: List[Dict[str, Any]]) -> List[int]:
+
+async def rank_responses(prompt: str, responses: list[dict[str, Any]]) -> list[int]:
     """Rank the responses using the LLM."""
     ranking_prompt = f"Given the following prompt:\n\n{prompt}\n\nRank the following responses from best to worst, considering accuracy, completeness, and relevance. Provide the ranking as a comma-separated list of indices (0-indexed). Do not add any explanations or any other text other than the comma-separated list.\n\n"
     for i, response in enumerate(responses):
@@ -48,18 +68,21 @@ async def rank_responses(prompt: str, responses: List[Dict[str, Any]]) -> List[i
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": ranking_prompt}],
     )
-    
+
     ranking_str = ranking_response.choices[0].message.content.strip()
     return [int(idx) for idx in ranking_str.split(",")]
 
-async def process_sample(sample: Dict[str, Any], **kwargs) -> Dict[str, Any]:
+
+async def process_sample(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
     """Process a single sample from the dataset."""
     prompt = sample[kwargs["prompt_column"]]
     approach = kwargs["approach"]
     results = []
 
     for _ in range(kwargs["num_completions_per_prompt"]):
-        response = await generate_response(prompt, model=kwargs["model"], approach=approach, temperature=kwargs["temperature"])
+        response = await generate_response(
+            prompt, model=kwargs["model"], approach=approach, temperature=kwargs["temperature"]
+        )
         results.append({"approach": approach, **response})
 
     random.shuffle(results)
@@ -75,11 +98,12 @@ async def process_sample(sample: Dict[str, Any], **kwargs) -> Dict[str, Any]:
         "results": results,
     }
 
+
 async def generate_dataset(dataset_name: str, output_file: str, **kwargs):
     """Generate the dataset and save it to a JSONL file."""
     dataset = load_dataset(dataset_name, split=f"{kwargs.get('dataset_split')}")
     dataset = dataset.select(range(kwargs.get("num_samples")))
-    
+
     process_kwargs = {k: v for k, v in kwargs.items() if k not in ["dataset_name", "dataset_split", "output_file"]}
 
     # List to store the coroutine for each sample
@@ -96,6 +120,7 @@ async def generate_dataset(dataset_name: str, output_file: str, **kwargs):
         dataset = dataset.add_column("optillm_completions", results_ds["results"])
         dataset.push_to_hub(kwargs.get("hub_dataset_id"), private=True)
 
+
 def main():
     parser = argparse.ArgumentParser(description="Generate OptILM dataset")
     parser.add_argument("--approach", type=str, default="mcts", help="optillm approach")
@@ -104,7 +129,7 @@ def main():
     parser.add_argument("--prompt_column", type=str, default="problem", help="Column name for the prompt")
     parser.add_argument("--num_samples", type=int, default=100, help="Number of samples to process")
     parser.add_argument("--num_completions_per_prompt", type=int, default=1, help="Number of completions per prompt")
-    parser.add_argument("--temperature", type=float, default=0., help="Temperature for sampling")
+    parser.add_argument("--temperature", type=float, default=0.0, help="Temperature for sampling")
     parser.add_argument("--output_file", type=str, default="optillm_dataset.jsonl", help="Output file path")
     parser.add_argument("--model", type=str, default="Qwen/Qwen2.5-Math-1.5B-Instruct", help="Model name")
     parser.add_argument("--hub_dataset_id", type=str, default=None, help="Hugging Face dataset ID to push results to")
@@ -116,6 +141,7 @@ def main():
         with ServerContext(ProxyServer, dict(model_path=args.model, approach=args.approach)) as proxy_server:
             proxy_server.wait()
             asyncio.run(generate_dataset(**vars(args)))
+
 
 if __name__ == "__main__":
     main()

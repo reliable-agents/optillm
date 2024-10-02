@@ -1,16 +1,25 @@
 import logging
 import re
-from typing import List, Tuple
+
 
 logger = logging.getLogger(__name__)
 
 pvg_completion_tokens = 0
 
-def generate_solutions(client, system_prompt: str, query: str, model: str, num_solutions: int, is_sneaky: bool = False, temperature: float = 0.7) -> List[str]:
+
+def generate_solutions(
+    client,
+    system_prompt: str,
+    query: str,
+    model: str,
+    num_solutions: int,
+    is_sneaky: bool = False,
+    temperature: float = 0.7,
+) -> list[str]:
     global pvg_completion_tokens
     role = "sneaky" if is_sneaky else "helpful"
     logger.info(f"Generating {num_solutions} {role} solutions")
-    
+
     role_instruction = """
     You are a problem solver tasked with generating solutions to the given problem. 
     If you are in 'helpful' mode:
@@ -25,10 +34,10 @@ def generate_solutions(client, system_prompt: str, query: str, model: str, num_s
     - Ensure your final answer or conclusion is incorrect, but in a way that's not immediately obvious.
     - Maintain the appearance of expertise in the relevant domain.
     """
-    
+
     messages = [
         {"role": "system", "content": f"{system_prompt}\n{role_instruction}\nYou are in {role} mode."},
-        {"role": "user", "content": query}
+        {"role": "user", "content": query},
     ]
     response = client.chat.completions.create(
         model=model,
@@ -42,7 +51,8 @@ def generate_solutions(client, system_prompt: str, query: str, model: str, num_s
     logger.debug(f"Generated {role} solutions: {solutions}")
     return solutions
 
-def verify_solutions(client, system_prompt: str, initial_query: str, solutions: List[str], model: str) -> List[float]:
+
+def verify_solutions(client, system_prompt: str, initial_query: str, solutions: list[str], model: str) -> list[float]:
     global pvg_completion_tokens
     logger.info(f"Verifying {len(solutions)} solutions")
     verify_prompt = f"""{system_prompt}
@@ -72,7 +82,7 @@ Ensure that the Score is a single number between 0 and 10, and the Explanation i
     for i, solution in enumerate(solutions):
         messages = [
             {"role": "system", "content": verify_prompt},
-            {"role": "user", "content": f"Problem: {initial_query}\n\nSolution: {solution}"}
+            {"role": "user", "content": f"Problem: {initial_query}\n\nSolution: {solution}"},
         ]
         response = client.chat.completions.create(
             model=model,
@@ -106,7 +116,8 @@ Ensure that the Score is a single number between 0 and 10, and the Explanation i
 
     return scores
 
-def extract_answer(final_state: str) -> Tuple[str, float]:
+
+def extract_answer(final_state: str) -> tuple[str, float]:
     logger.debug(f"Extracting answer from state: {final_state}")
     patterns = [
         r"The answer is (\d+)",
@@ -116,7 +127,7 @@ def extract_answer(final_state: str) -> Tuple[str, float]:
         r"Thus, the answer is (\d+)",
         r"In conclusion, the answer is (\d+)",
     ]
-    
+
     for pattern in patterns:
         match = re.search(pattern, final_state)
         if match:
@@ -124,44 +135,51 @@ def extract_answer(final_state: str) -> Tuple[str, float]:
             confidence = 1.0
             logger.debug(f"Answer found using pattern '{pattern}': {answer}")
             return answer, confidence
-    
-    numbers = re.findall(r'\d+', final_state)
+
+    numbers = re.findall(r"\d+", final_state)
     if numbers:
         answer = numbers[-1]
         confidence = 0.5
         logger.debug(f"No pattern found. Using last number as answer: {answer}")
         return answer, confidence
-    
+
     logger.warning("No answer found in the state.")
     return "", 0.0
 
-def inference_time_pv_game(system_prompt: str, initial_query: str, client, model: str, num_rounds: int = 2, num_solutions: int = 3) -> str:
+
+def inference_time_pv_game(
+    system_prompt: str, initial_query: str, client, model: str, num_rounds: int = 2, num_solutions: int = 3
+) -> str:
     global pvg_completion_tokens
     logger.info(f"Starting inference-time PV game with {num_rounds} rounds and {num_solutions} solutions per round")
-   
+
     best_solution = ""
     best_score = -1
 
     for round in range(num_rounds):
         logger.info(f"Starting round {round + 1}")
-        
+
         temperature = max(0.2, 0.7 - (round * 0.1))
-        
-        helpful_solutions = generate_solutions(client, system_prompt, initial_query, model, num_solutions, temperature=temperature)
-        sneaky_solutions = generate_solutions(client, system_prompt, initial_query, model, num_solutions, is_sneaky=True, temperature=temperature)
+
+        helpful_solutions = generate_solutions(
+            client, system_prompt, initial_query, model, num_solutions, temperature=temperature
+        )
+        sneaky_solutions = generate_solutions(
+            client, system_prompt, initial_query, model, num_solutions, is_sneaky=True, temperature=temperature
+        )
         all_solutions = helpful_solutions + sneaky_solutions
 
         scores = verify_solutions(client, system_prompt, initial_query, all_solutions, model)
 
-        round_best_solution = max(zip(all_solutions, scores), key=lambda x: x[1])
-        
+        round_best_solution = max(zip(all_solutions, scores, strict=False), key=lambda x: x[1])
+
         if round_best_solution[1] > best_score:
             best_solution = round_best_solution[0]
             best_score = round_best_solution[1]
             logger.info(f"New best solution found in round {round + 1} with score {best_score}")
         else:
             logger.debug(f"No improvement in round {round + 1}. Best score remains {best_score}")
-            
+
         if round < num_rounds - 1:
             logger.debug("Refining query for next round")
             refine_prompt = f"""
@@ -175,10 +193,7 @@ def inference_time_pv_game(system_prompt: str, initial_query: str, client, model
             
             Refined query:
             """
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": refine_prompt}
-            ]
+            messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": refine_prompt}]
             response = client.chat.completions.create(
                 model=model,
                 messages=messages,
