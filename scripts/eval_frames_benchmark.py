@@ -1,6 +1,5 @@
 import argparse
 import json
-import os
 import time
 from typing import Dict, List
 
@@ -14,7 +13,7 @@ SLEEP_INTERVAL = 60
 
 def load_existing_results(filename: str) -> List[Dict]:
     try:
-        with open(filename, "r") as f:
+        with open(filename) as f:
             return json.load(f)
     except FileNotFoundError:
         return []

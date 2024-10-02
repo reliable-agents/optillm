@@ -7,7 +7,6 @@ import logging
 import os
 import re
 import secrets
-from concurrent.futures import ThreadPoolExecutor
 
 from flask import Flask, Response, jsonify, request
 from openai import AzureOpenAI, OpenAI

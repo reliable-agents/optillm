@@ -3,10 +3,7 @@ import logging
 import math
 import random
 import re
-from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict, List, Tuple
-
-import aiohttp
+from typing import List, Tuple
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")

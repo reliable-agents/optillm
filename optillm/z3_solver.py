@@ -57,8 +57,6 @@ def prepare_safe_globals():
 
 
 def execute_code_in_process(code: str):
-    import itertools
-    import math
     from fractions import Fraction
 
     import z3

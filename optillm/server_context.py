@@ -4,7 +4,6 @@ import subprocess
 import time
 
 import requests
-from openai import OpenAI
 
 
 class Server:
@@ -31,7 +30,7 @@ class VLLMServer(Server):
         self.is_ready = False
         self.model_path = model_path
         # we have to apply the chat template ourselves due to how the binary search is run on parts of sequences
-        self.output_file = open(f"vllm_server.log", "w")
+        self.output_file = open("vllm_server.log", "w")
 
         self.process = subprocess.Popen(
             [
@@ -49,7 +48,7 @@ class VLLMServer(Server):
         while True:
             time.sleep(5)
             try:
-                response = requests.get(f"http://0.0.0.0:8000/health")
+                response = requests.get("http://0.0.0.0:8000/health")
                 if response.status_code == 200:
                     print("VLLMServer is ready")
                     self.is_ready = True
@@ -65,7 +64,7 @@ class ProxyServer(Server):
         self.model_path = model_path
         self.approach = approach
         # we have to apply the chat template ourselves due to how the binary search is run on parts of sequences
-        self.output_file = open(f"proxy_server.log", "w")
+        self.output_file = open("proxy_server.log", "w")
 
         self.process = subprocess.Popen(
             [
@@ -85,7 +84,7 @@ class ProxyServer(Server):
         while True:
             time.sleep(5)
             try:
-                response = requests.get(f"http://0.0.0.0:8080/health")
+                response = requests.get("http://0.0.0.0:8080/health")
                 if response.status_code == 200:
                     print("ProxyServer is ready")
                     self.is_ready = True

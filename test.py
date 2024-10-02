@@ -8,7 +8,6 @@ from typing import Dict, List
 
 from openai import OpenAI
 
-from litellm_wrapper import LiteLLMWrapper
 from optillm.bon import best_of_n_sampling
 from optillm.cot_reflection import cot_reflection
 from optillm.leap import leap
@@ -60,7 +59,7 @@ APPROACHES = {
 
 
 def load_test_cases(file_path: str) -> List[Dict]:
-    with open(file_path, "r") as f:
+    with open(file_path) as f:
         return json.load(f)
 
 

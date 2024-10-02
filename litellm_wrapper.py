@@ -1,7 +1,7 @@
-import os
-import litellm
+from typing import Dict, List, Optional
+
 from litellm import completion
-from typing import List, Dict, Any, Optional
+
 
 class LiteLLMWrapper:
     def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None):
