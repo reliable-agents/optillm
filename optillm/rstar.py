@@ -1,24 +1,27 @@
+import asyncio
+import logging
 import math
 import random
-import logging
-from typing import List, Dict, Any, Tuple
 import re
-import asyncio
-import aiohttp
 from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Dict, List, Tuple
+
+import aiohttp
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
+
 class Node:
-    def __init__(self, state: str, action: str, parent: 'Node' = None):
+    def __init__(self, state: str, action: str, parent: "Node" = None):
         self.state = state
         self.action = action
         self.parent = parent
         self.children: List[Node] = []
         self.visits = 0
         self.value = 0.0
+
 
 class RStar:
     def __init__(self, system: str, client, model: str, max_depth: int = 3, num_rollouts: int = 5, c: float = 1.4):
@@ -28,7 +31,7 @@ class RStar:
         self.num_rollouts = num_rollouts
         self.c = c
         self.actions = ["A1", "A2", "A3", "A4", "A5"]
-        self.original_question = None 
+        self.original_question = None
         self.system = system
         self.rstar_completion_tokens = 0
         logger.debug(f"Initialized RStar with model: {model}, max_depth: {max_depth}, num_rollouts: {num_rollouts}")
@@ -96,17 +99,20 @@ class RStar:
         response = self.client.chat.completions.create(
             model=self.model_name,
             messages=[
-                {"role": "system", "content": "You are a helpful assistant focused on solving mathematical problems. Stick to the given question and avoid introducing new scenarios."},
-                {"role": "user", "content": prompt}
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant focused on solving mathematical problems. Stick to the given question and avoid introducing new scenarios.",
+                },
+                {"role": "user", "content": prompt},
             ],
             max_tokens=4096,
-            temperature=0.2
+            temperature=0.2,
         )
         self.rstar_completion_tokens += response.usage.completion_tokens
         generated_response = response.choices[0].message.content.strip()
         logger.debug(f"Generated response: {generated_response}")
         return generated_response
-    
+
     def select_action(self, node: Node) -> Tuple[Node, str]:
         if not node.children:
             action = random.choice(self.actions)
@@ -116,7 +122,7 @@ class RStar:
         uct_values = []
         for child in node.children:
             if child.visits == 0:
-                uct = float('inf')
+                uct = float("inf")
             else:
                 uct = child.value / child.visits + self.c * math.sqrt(math.log(node.visits) / child.visits)
             uct_values.append(uct)
@@ -206,7 +212,7 @@ class RStar:
 
     def trajectory_score(self, trajectory: List[Node]) -> float:
         if not trajectory:
-            return float('-inf')
+            return float("-inf")
         last_node = trajectory[-1]
         if last_node.visits == 0:
             return last_node.value  # Return just the value if visits is zero
@@ -216,7 +222,7 @@ class RStar:
         valid_answers = [(answer, conf) for answer, conf in answers if answer]
         if not valid_answers:
             return "Unable to determine a valid answer."
-        
+
         # Sort by confidence and then by frequency
         answer_counts = {}
         for answer, conf in valid_answers:
@@ -224,43 +230,42 @@ class RStar:
                 answer_counts[answer] = (answer_counts[answer][0] + 1, max(answer_counts[answer][1], conf))
             else:
                 answer_counts[answer] = (1, conf)
-        
+
         sorted_answers = sorted(answer_counts.items(), key=lambda x: (-x[1][1], -x[1][0]))
         best_answer, (count, conf) = sorted_answers[0]
-        
+
         logger.debug(f"Selected best answer: {best_answer} (count: {count}, confidence: {conf})")
         return best_answer
 
     def create_prompt(self, state: str, action: str) -> str:
-        question = self.original_question if hasattr(self, 'original_question') else "the original question"
+        question = self.original_question if hasattr(self, "original_question") else "the original question"
         prompts = {
-        "A1": f"""Given the current state: {state}
+            "A1": f"""Given the current state: {state}
 Generate the next logical step in solving {question}.
 Your response should be a single, clear thought that moves towards the solution.
 If you can determine the final answer at this step, state it clearly.""",
-
-        "A2": f"""Given the current state: {state}
+            "A2": f"""Given the current state: {state}
 Continue the reasoning process to solve {question}.
 Provide the remaining steps needed to reach the final answer.
 Each step should be clear and directly related to solving the problem.""",
-
-        "A3": f"""Given the current state: {state}
+            "A3": f"""Given the current state: {state}
 Identify a key sub-question that needs to be answered to solve {question}.
 State this sub-question clearly, then provide its answer.
 Explain how this sub-question and its answer contribute to solving the main problem.""",
-
-        "A4": f"""Given the current state: {state}
+            "A4": f"""Given the current state: {state}
 Re-examine the previous step in solving {question} using Chain-of-Thought reasoning.
 Break down your thinking process explicitly, showing each logical step.
 If you reach a conclusion, state it clearly.""",
-
-        "A5": f"""Given the current state: {state}
+            "A5": f"""Given the current state: {state}
 Rephrase {question} by clearly listing all relevant conditions and unknowns.
 Ensure that your rephrasing captures all important details from the original question.
-This rephrasing should help clarify the problem and guide the solution process."""
-    }
-    
-        prompt = prompts[action] + "\n\nIf you determine the final answer, explicitly state 'The final answer is [your numeric answer]' at the end of your response."
+This rephrasing should help clarify the problem and guide the solution process.""",
+        }
+
+        prompt = (
+            prompts[action]
+            + "\n\nIf you determine the final answer, explicitly state 'The final answer is [your numeric answer]' at the end of your response."
+        )
         logger.debug(f"Created prompt for action {action}: {prompt}")
         return prompt
 
@@ -272,22 +277,22 @@ This rephrasing should help clarify the problem and guide the solution process."
     def compare_completions(self, completion: str, remaining_trajectory: List[Node]) -> bool:
         remaining_states = [node.state for node in remaining_trajectory]
         remaining_reasoning = " ".join(remaining_states)
-        
+
         # Normalize both strings: remove punctuation, convert to lowercase, and split into words
-        completion_words = set(completion.lower().replace('.', '').replace(',', '').split())
-        trajectory_words = set(remaining_reasoning.lower().replace('.', '').replace(',', '').split())
-        
+        completion_words = set(completion.lower().replace(".", "").replace(",", "").split())
+        trajectory_words = set(remaining_reasoning.lower().replace(".", "").replace(",", "").split())
+
         # Calculate word overlap
         overlap = len(completion_words.intersection(trajectory_words))
         total_words = len(completion_words.union(trajectory_words))
-        
+
         # Consider it a match if there's more than 70% word overlap
         return overlap / total_words > 0.7
 
     def evaluate(self, node: Node) -> float:
         # Extract the final answer from the node's state
         answer, confidence = self.extract_answer(node.state)
-        
+
         # Check if the answer is a number
         try:
             float(answer)
@@ -307,7 +312,7 @@ This rephrasing should help clarify the problem and guide the solution process."
             r"Thus, the answer is (\d+)",
             r"In conclusion, the answer is (\d+)",
         ]
-        
+
         for pattern in patterns:
             match = re.search(pattern, final_state)
             if match:
@@ -315,18 +320,18 @@ This rephrasing should help clarify the problem and guide the solution process."
                 confidence = 1.0
                 logger.debug(f"Answer found using pattern '{pattern}': {answer}")
                 return answer, confidence
-        
+
         # If no pattern is found, try to extract any number
-        numbers = re.findall(r'\d+', final_state)
+        numbers = re.findall(r"\d+", final_state)
         if numbers:
             answer = numbers[-1]  # Take the last number found
             confidence = 0.5  # Lower confidence as it's not in the expected format
             logger.debug(f"No pattern found. Using last number as answer: {answer}")
             return answer, confidence
-        
+
         logger.warning("No answer found in the state.")
         return "", 0.0
-   
+
     def solve(self, question: str) -> str:
         """
         Synchronous wrapper for solve_async method.

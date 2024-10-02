@@ -1,4 +1,7 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
+
+extras = {}
+extras["quality"] = ["ruff", "isort"]
 
 setup(
     name="optillm",
@@ -24,6 +27,7 @@ setup(
     author="codelion",
     author_email="codelion@okyasoft.com",
     description="An optimizing inference proxy for LLMs.",
+    extras_require=extras,
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/codelion/optillm",

@@ -1,9 +1,10 @@
-import re
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
-def cot_reflection(system_prompt, initial_query, client, model: str, return_full_response: bool=False):
+
+def cot_reflection(system_prompt, initial_query, client, model: str, return_full_response: bool = False):
     cot_completion_tokens = 0
     cot_prompt = f"""
         {system_prompt}
@@ -35,12 +36,9 @@ def cot_reflection(system_prompt, initial_query, client, model: str, return_full
     # Make the API call
     response = client.chat.completions.create(
         model=model,
-        messages=[
-            {"role": "system", "content": cot_prompt},
-            {"role": "user", "content": initial_query}
-        ],
+        messages=[{"role": "system", "content": cot_prompt}, {"role": "user", "content": initial_query}],
         temperature=0.7,
-        max_tokens=4096
+        max_tokens=4096,
     )
 
     # Extract the full response
@@ -49,8 +47,8 @@ def cot_reflection(system_prompt, initial_query, client, model: str, return_full
     logger.info(f"CoT with Reflection :\n{full_response}")
 
     # Use regex to extract the content within <thinking> and <output> tags
-    thinking_match = re.search(r'<thinking>(.*?)</thinking>', full_response, re.DOTALL)
-    output_match = re.search(r'<output>(.*?)(?:</output>|$)', full_response, re.DOTALL)
+    thinking_match = re.search(r"<thinking>(.*?)</thinking>", full_response, re.DOTALL)
+    output_match = re.search(r"<output>(.*?)(?:</output>|$)", full_response, re.DOTALL)
 
     thinking = thinking_match.group(1).strip() if thinking_match else "No thinking process provided."
     output = output_match.group(1).strip() if output_match else full_response
@@ -61,4 +59,3 @@ def cot_reflection(system_prompt, initial_query, client, model: str, return_full
         return full_response, cot_completion_tokens
     else:
         return output, cot_completion_tokens
-

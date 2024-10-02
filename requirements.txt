@@ -13,3 +13,5 @@ litellm
 requests
 beautifulsoup4
 lxml
+ruff
+isort

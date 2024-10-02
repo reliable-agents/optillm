@@ -1,10 +1,12 @@
-import random
 import logging
-import numpy as np
+import random
+from typing import Dict, List
+
 import networkx as nx
-from typing import List, Dict
+import numpy as np
 
 logger = logging.getLogger(__name__)
+
 
 class DialogueState:
     def __init__(self, system_prompt: str, conversation_history: List[Dict[str, str]], current_query: str):
@@ -13,7 +15,10 @@ class DialogueState:
         self.current_query = current_query
 
     def __str__(self):
-        return f"System: {self.system_prompt}\nHistory: {self.conversation_history}\nCurrent Query: {self.current_query}"
+        return (
+            f"System: {self.system_prompt}\nHistory: {self.conversation_history}\nCurrent Query: {self.current_query}"
+        )
+
 
 class MCTSNode:
     def __init__(self, state: DialogueState, parent=None):
@@ -22,6 +27,7 @@ class MCTSNode:
         self.children = []
         self.visits = 0
         self.value = 0
+
 
 class MCTS:
     def __init__(self, simulation_depth, exploration_weight, client, model):
@@ -39,7 +45,11 @@ class MCTS:
         if not node.children:
             logger.debug("Node has no children. Returning current node.")
             return node
-        selected_node = max(node.children, key=lambda c: c.value / (c.visits + 1e-8) + self.exploration_weight * np.sqrt(np.log(node.visits + 1) / (c.visits + 1e-8)))
+        selected_node = max(
+            node.children,
+            key=lambda c: c.value / (c.visits + 1e-8)
+            + self.exploration_weight * np.sqrt(np.log(node.visits + 1) / (c.visits + 1e-8)),
+        )
         logger.debug(f"Selected child node. Visits: {selected_node.visits}, Value: {selected_node.value}")
         return selected_node
 
@@ -55,7 +65,9 @@ class MCTS:
             self.node_labels[id(child)] = f"Visits: {child.visits}\nValue: {child.value:.2f}"
             logger.debug(f"Created child node {i+1}. Action: {action[:50]}...")
         selected_child = random.choice(node.children)
-        logger.debug(f"Randomly selected child node for simulation. Visits: {selected_child.visits}, Value: {selected_child.value}")
+        logger.debug(
+            f"Randomly selected child node for simulation. Visits: {selected_child.visits}, Value: {selected_child.value}"
+        )
         return selected_child
 
     def simulate(self, node: MCTSNode) -> float:
@@ -88,7 +100,7 @@ class MCTS:
             self.graph.add_node(id(self.root))
             self.node_labels[id(self.root)] = f"Root\nVisits: 0\nValue: 0.00"
             logger.debug("Created root node")
-        
+
         for i in range(num_simulations):
             logger.debug(f"Starting simulation {i+1}")
             node = self.select(self.root)
@@ -96,7 +108,7 @@ class MCTS:
                 node = self.expand(node)
             value = self.simulate(node)
             self.backpropagate(node, value)
-            
+
         best_child = max(self.root.children, key=lambda c: c.visits)
         logger.debug(f"Search complete. Best child node: Visits: {best_child.visits}, Value: {best_child.value}")
         return best_child.state
@@ -106,7 +118,7 @@ class MCTS:
         messages = [{"role": "system", "content": state.system_prompt}]
         messages.extend(state.conversation_history)
         messages.append({"role": "user", "content": state.current_query})
-        
+
         completions = []
         n = 3
 
@@ -114,9 +126,9 @@ class MCTS:
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
-            max_tokens=2048, # Lowered for testing as the max context length of Qwen/Qwen2.5-Math-1.5B-Instruct is 4096 tokens
+            max_tokens=2048,  # Lowered for testing as the max context length of Qwen/Qwen2.5-Math-1.5B-Instruct is 4096 tokens
             n=n,
-            temperature=1
+            temperature=1,
         )
         completions = [choice.message.content.strip() for choice in response.choices]
         self.completion_tokens += response.usage.completion_tokens
@@ -127,20 +139,21 @@ class MCTS:
         logger.info(f"Applying action: {action[:50]}...")
         new_history = state.conversation_history.copy()
         new_history.append({"role": "assistant", "content": action})
-        
+
         messages = [{"role": "system", "content": state.system_prompt}]
         messages.extend(new_history)
-        messages.append({"role": "user", "content": "Based on this conversation, what might the user ask or say next? Provide a likely user query."})
-        
+        messages.append(
+            {
+                "role": "user",
+                "content": "Based on this conversation, what might the user ask or say next? Provide a likely user query.",
+            }
+        )
+
         logger.info("Requesting next user query from the model")
         response = self.client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            max_tokens=1024,
-            n=1,
-            temperature=1
+            model=self.model, messages=messages, max_tokens=1024, n=1, temperature=1
         )
-        
+
         next_query = response.choices[0].message.content
         self.completion_tokens += response.usage.completion_tokens
         logger.info(f"Generated next user query: {next_query}")
@@ -155,14 +168,15 @@ class MCTS:
         logger.info("Evaluating current state")
         messages = [{"role": "system", "content": state.system_prompt}]
         messages.extend(state.conversation_history)
-        messages.append({"role": "user", "content": "Evaluate the quality of this conversation on a scale from 0 to 1, where 0 is poor and 1 is excellent. Consider factors such as coherence, relevance, and engagement. Respond with only a number."})
-        
+        messages.append(
+            {
+                "role": "user",
+                "content": "Evaluate the quality of this conversation on a scale from 0 to 1, where 0 is poor and 1 is excellent. Consider factors such as coherence, relevance, and engagement. Respond with only a number.",
+            }
+        )
+
         response = self.client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            max_tokens=256,
-            n=1,
-            temperature=0.1
+            model=self.model, messages=messages, max_tokens=256, n=1, temperature=0.1
         )
         self.completion_tokens += response.usage.completion_tokens
         try:
@@ -174,14 +188,24 @@ class MCTS:
             logger.warning("Failed to parse evaluation score. Using default value 0.5")
             return 0.5  # Default to a neutral score if parsing fails
 
-def chat_with_mcts(system_prompt: str, initial_query: str, client, model: str, num_simulations: int = 2, exploration_weight: float = 0.2, 
-                   simulation_depth: int = 1) -> str:
+
+def chat_with_mcts(
+    system_prompt: str,
+    initial_query: str,
+    client,
+    model: str,
+    num_simulations: int = 2,
+    exploration_weight: float = 0.2,
+    simulation_depth: int = 1,
+) -> str:
     logger.info("Starting chat with MCTS")
-    logger.info(f"Parameters: num_simulations={num_simulations}, exploration_weight={exploration_weight}, simulation_depth={simulation_depth}")
+    logger.info(
+        f"Parameters: num_simulations={num_simulations}, exploration_weight={exploration_weight}, simulation_depth={simulation_depth}"
+    )
     mcts = MCTS(simulation_depth=simulation_depth, exploration_weight=exploration_weight, client=client, model=model)
     initial_state = DialogueState(system_prompt, [], initial_query)
     logger.info(f"Initial query: {initial_query}")
     final_state = mcts.search(initial_state, num_simulations)
-    response = final_state.conversation_history[-1]['content'] if final_state.conversation_history else ""
+    response = final_state.conversation_history[-1]["content"] if final_state.conversation_history else ""
     logger.info(f"MCTS chat complete. Final response: {response[:100]}...")
     return response, mcts.completion_tokens
