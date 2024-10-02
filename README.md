@@ -96,14 +96,14 @@ OPENAI_BASE_URL = "http://localhost:8000/v1"
 client = OpenAI(api_key=OPENAI_KEY, base_url=OPENAI_BASE_URL)
 
 response = client.chat.completions.create(
-  model="moa-gpt-4o",
+  model="gpt-4o-mini",
   messages=[
     {
       "role": "user",
       "content": "Write a Python program to build an RL model to recite text from any position that the user provides, using only numpy."
     }
   ],
-  temperature=0.2
+  temperature=0.2,
 )
 
 print(response)
@@ -181,17 +181,25 @@ or your own code where you want to use the results from optillm. You can use it 
 To generate a synthetic dataset with optillm and vLLM, run the following:
 
 ```shell
-python generate_dataset.py --approach mcts --num_samples 5
+python generate_dataset.py \
+  --approach mcts \
+  --model meta-llama/Llama-3.2-1B-Instruct \
+  --dataset_name argilla/magpie-ultra-v0.1 \
+  --dataset_column instruction \
+  --num_samples 5
 ```
 
 By default, this generates _one completion per prompt_ and the outputs will be saved to `data/optillm_dataset.jsonl`. If you want to generate multiple completions per prompt (e.g. for preference modelling), run:
 
 ```shell
-python scripts/gen_optillm_dataset.py --dataset AI-MO/NuminaMath-CoT --prompt_column problem --approach cot_reflection --temperature 0.9 --num_completions_per_prompt 3 --num_samples 5 
+python generate_dataset.py \
+  --approach mcts \
+  --model meta-llama/Llama-3.2-1B-Instruct \
+  --dataset_name argilla/magpie-ultra-v0.1 \
+  --dataset_column instruction \
+  --num_samples 5 \
+  --n 2 
 ```
-
-> [!NOTE]
-> This fork includes tighter integration with vLLM and better support for generating synthetic preferences from models on the Hugging Face Hub.
 
 
 ## Implemented techniques

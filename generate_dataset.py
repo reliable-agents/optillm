@@ -54,9 +54,7 @@ async def generate_response(prompt: str, **kwargs) -> dict[str, Any]:
             model=f"{approach}-{kwargs['model']}",  # Assuming OptILM uses this naming convention
             messages=[{"role": "user", "content": prompt}],
             max_tokens=max_tokens,
-            n=4
         )
-        print(response.choices)
         return {
             "content": response.choices[0].message.content,
             "tokens": response.usage.completion_tokens,
@@ -80,11 +78,11 @@ async def rank_responses(prompt: str, responses: list[dict[str, Any]]) -> list[i
 
 async def process_sample(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
     """Process a single sample from the dataset."""
-    prompt = sample[kwargs["prompt_column"]]
+    prompt = sample[kwargs["dataset_column"]]
     approach = kwargs["approach"]
     results = []
 
-    for _ in range(kwargs["num_completions_per_prompt"]):
+    for _ in range(kwargs["n"]):
         response = await generate_response(
             prompt, **kwargs
         )
@@ -131,17 +129,18 @@ async def generate_dataset(dataset_name: str, output_file: str, **kwargs):
 def main():
     parser = argparse.ArgumentParser(description="Generate OptILM dataset")
     parser.add_argument("--approach", type=str, default="mcts", help="optillm approach")
-    parser.add_argument("--dataset_name", type=str, default="AI-MO/NuminaMath-TIR", help="Dataset name")
+    parser.add_argument("--model", type=str, help="Model name")
+    parser.add_argument("--dataset_name", type=str, help="Hub dataset repo ID")
     parser.add_argument("--dataset_split", type=str, default="train", help="Dataset split")
-    parser.add_argument("--prompt_column", type=str, default="problem", help="Column name for the prompt")
-    parser.add_argument("--num_samples", type=int, default=None, help="Number of samples to process")
-    parser.add_argument("--num_completions_per_prompt", type=int, default=1, help="Number of completions per prompt")
-    parser.add_argument("--temperature", type=float, default=0.7, help="Temperature for sampling")
-    parser.add_argument("--max_tokens", type=int, default=2048, help="Maximum number of tokens for completions")
+    parser.add_argument("--dataset_column", type=str, default="prompt", help="Column name which contains the prompts")
+    parser.add_argument("--num_samples", type=int, default=5, help="Number of samples to process")
     parser.add_argument("--output_file", type=str, default="optillm_dataset.jsonl", help="Output file path")
-    parser.add_argument("--model", type=str, default="Qwen/Qwen2.5-Math-1.5B-Instruct", help="Model name")
     parser.add_argument("--hub_dataset_id", type=str, default=None, help="Hugging Face dataset ID to push results to")
     parser.add_argument("--push_to_hub", action="store_true", help="Push results to Hugging Face dataset")
+    # OpenAI API parameters
+    parser.add_argument("--n", type=int, default=1, help="How many completions to generate for each prompt")
+    parser.add_argument("--temperature", type=float, default=0.7, help="Temperature for sampling")
+    parser.add_argument("--max_tokens", type=int, default=2048, help="Maximum number of tokens for completions")
     args = parser.parse_args()
 
     with ServerContext(VLLMServer, dict(model_path=args.model)) as vllm_server:

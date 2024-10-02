@@ -58,11 +58,12 @@ class VLLMServer(Server):
 
 
 class ProxyServer(Server):
-    def __init__(self, model_path="", approach="") -> None:
+    def __init__(self, model_path="", approach="", return_full_response=True) -> None:
         print(f"Starting the ProxyServer approach {approach=}")
         self.is_ready = False
         self.model_path = model_path
         self.approach = approach
+        self.return_full_response = return_full_response
         # we have to apply the chat template ourselves due to how the binary search is run on parts of sequences
         self.output_file = open("proxy_server.log", "w")
 
@@ -73,6 +74,7 @@ class ProxyServer(Server):
                 "--base_url=http://localhost:8000/v1",
                 f"--model={self.model_path}",
                 f"--approach={self.approach}",
+                f"--return-full-response={self.return_full_response}",
             ],
             stdout=self.output_file,
             stderr=self.output_file,
