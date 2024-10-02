@@ -57,35 +57,8 @@ class VLLMServer(Server):
             except requests.exceptions.ConnectionError:
                 print("VLLMServer is not ready yet, waiting for 5 seconds")
             
-
-    def generate(self, prompt, partial_reply=None) -> str:
-        self.wait()
-        
-        client = OpenAI(
-            base_url="http://localhost:8000/v1",
-        )
-        messages=[
-            {"role": "user", "content": prompt}
-        ]        
-        if partial_reply is not None:
-            messages.append({"role": "assistant", "content": partial_reply})   
-                 
-        completion = client.chat.completions.create(
-            model=self.model_path,
-            messages=messages,
-            max_tokens=1024,
-            extra_body={
-                "continue_final_message": True,
-                "add_generation_prompt": False,
-                } 
-            if partial_reply is not None else None
-        )       
-        return completion.choices[0].message.content
         
         
-
-    
-
 
 class ProxyServer(Server):
     def __init__(self, model_path="", approach="") -> None:
@@ -107,29 +80,6 @@ class ProxyServer(Server):
             stdout=self.output_file,
             stderr=self.output_file,
         )
-    def generate(self, prompt, partial_reply=None) -> str:
-        self.wait()
-        
-        client = OpenAI(
-            base_url="http://localhost:8080/v1",
-        )
-        messages=[
-            {"role": "user", "content": prompt}
-        ]        
-        if partial_reply is not None:
-            messages.append({"role": "assistant", "content": partial_reply})   
-                 
-        completion = client.chat.completions.create(
-            model=f"{self.approach}-{self.model_path}",
-            messages=messages,
-            max_tokens=1024,
-            # extra_body={
-            #     "continue_final_message": True,
-            #     "add_generation_prompt": False,
-            #     } 
-            # if partial_reply is not None else None
-        )       
-        return completion.choices[0].message.content  
           
     def wait(self):
         if self.is_ready:
