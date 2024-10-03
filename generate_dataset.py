@@ -100,6 +100,7 @@ async def generate_response(prompt: str, args: ScriptArguments, sampling_args: S
     """Generate a response using the specified approach."""
     if args.approach == "none":
         # Use the base model without any optimization technique
+        print(f"Calling OpenAI API with model: {args.model}")
         client = AsyncOpenAI()
         response = await client.chat.completions.create(
             model=args.model,

@@ -26,11 +26,11 @@ class Server:
 
 
 class VLLMServer(Server):
-    def __init__(self, model_path="") -> None:
+    def __init__(self, model_path="", logs_filepath: str = "vllm_server.log") -> None:
         print(f"Starting the VLLM server with {model_path=}")
         self.is_ready = False
         self.model_path = model_path
-        self.output_file = open("vllm_server.log", "w")
+        self.output_file = open(logs_filepath, "w")
 
         self.process = subprocess.Popen(
             [
@@ -58,13 +58,15 @@ class VLLMServer(Server):
 
 
 class ProxyServer(Server):
-    def __init__(self, model_path="", approach="", return_full_response=True) -> None:
+    def __init__(
+        self, model_path="", approach="", return_full_response=True, logs_filepath: str = "proxy_server.log"
+    ) -> None:
         print(f"Starting the ProxyServer with {approach=}")
         self.is_ready = False
         self.model_path = model_path
         self.approach = approach
         self.return_full_response = return_full_response
-        self.output_file = open("proxy_server.log", "w")
+        self.output_file = open(logs_filepath, "w")
 
         self.process = subprocess.Popen(
             [

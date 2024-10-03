@@ -261,7 +261,7 @@ python generate_dataset.py   \
 To generate a synthetic dataset with Slurm on the Hugging Face cluster, run:
 
 ```shell
-sbatch --gres=gpu:{NUM_GPUS} launch.slurm \
+sbatch launch.slurm \
   --approach mcts \
   --model meta-llama/Llama-3.2-1B-Instruct \
   --dataset_name argilla/magpie-ultra-v0.1 \
