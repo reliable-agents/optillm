@@ -213,10 +213,39 @@ python generate_dataset.py \
   --push_to_hub
 ```
 
+Note that some models like Llama3 require a CoT prompt to produce the correct format on MATH. For these cases, use the `--prompt_suffix` argument:
+
+```shell
+python generate_dataset.py \
+  --approach mcts \
+  --model meta-llama/Llama-3.2-1B-Instruct \
+  --dataset_name lighteval/MATH \
+  --dataset_split test \
+  --dataset_column problem \
+  --prompt_suffix '\nPlease reason step by step and put your final answer within \\boxed{{}}.' \
+  --num_samples 5 \
+  --push_to_hub
+```
+
+
 For all script options, run:
 
 ```shell
 python generate_dataset.py -h
+```
+
+#### Launch a Slurm job
+
+To generate a synthetic dataset with Slurm on the Hugging Face cluster, run:
+
+```shell
+sbatch --gres=gpu:{NUM_GPUS} launch.slurm \
+  --approach mcts \
+  --model meta-llama/Llama-3.2-1B-Instruct \
+  --dataset_name argilla/magpie-ultra-v0.1 \
+  --dataset_column instruction \
+  --num_samples 5 \
+  --push_to_hub
 ```
 
 ## Implemented techniques
