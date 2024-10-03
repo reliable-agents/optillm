@@ -66,7 +66,7 @@ class ScriptArguments:
     dataset_split: str = "train"
     dataset_column: str = "prompt"
     prompt_suffix: str = ""
-    num_samples: int = 5
+    num_samples: int = None
     output_filename: str = None
     hub_dataset_id: str = None
     push_to_hub: bool = False
@@ -170,7 +170,8 @@ async def process_sample(sample: dict[str, Any], args: ScriptArguments, sampling
 async def generate_dataset(args: ScriptArguments, sampling_args: SamplingArguments):
     """Generate the dataset and save it to a JSONL file."""
     dataset = load_dataset(args.dataset_name, split=args.dataset_split, trust_remote_code=True)
-    dataset = dataset.select(range(min(args.num_samples, len(dataset))))
+    if args.num_samples is not None:
+        dataset = dataset.select(range(min(args.num_samples, len(dataset))))
 
     # List to store the coroutine for each sample
     tasks = [process_sample(sample, args, sampling_args) for sample in dataset]
