@@ -213,6 +213,8 @@ python generate_dataset.py \
   --push_to_hub
 ```
 
+The results will be visible in the `prompt` and `optillm_completions` columns of the dataset.
+
 Note that some models like Llama3 require a CoT prompt to produce the correct format on MATH. For these cases, use the `--prompt_suffix` argument to append an instruction to the prompt:
 
 ```shell
@@ -223,8 +225,7 @@ python generate_dataset.py \
   --dataset_split test \
   --dataset_column problem \
   --prompt_suffix '\nPlease reason step by step and put your final answer within \\boxed{{}}.' \
-  --num_samples 5 \
-  --push_to_hub
+  --num_samples 5
 ```
 
 

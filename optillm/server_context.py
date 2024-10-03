@@ -116,10 +116,10 @@ class ServerContext:
 
 
 if __name__ == "__main__":
-    with ServerContext(VLLMServer, dict(model_path="meta-llama/Llama-3.2-3B-Instruct")) as vllm_server:
+    with ServerContext(VLLMServer, dict(model_path="meta-llama/Llama-3.2-1B-Instruct")) as vllm_server:
         vllm_server.wait()
         with ServerContext(
-            ProxyServer, dict(model_path="meta-llama/Llama-3.2-3B-Instruct", approach="mcts")
+            ProxyServer, dict(model_path="meta-llama/Llama-3.2-1B-Instruct", approach="mcts")
         ) as proxy_server:
             proxy_server.wait()
             while True:

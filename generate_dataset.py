@@ -11,6 +11,8 @@ from transformers import HfArgumentParser
 from optillm.server_context import ProxyServer, ServerContext, VLLMServer
 
 from dataclasses import dataclass
+from pathlib import Path
+from tqdm.asyncio import tqdm as tqdm_asyncio
 
 RANKING_MODEL = "gpt-4o-mini"
 RANKING_PROMPT = "Given the following prompt:\n\n{prompt}\n\nRank the following {num_responses} responses from best to worst, considering accuracy, completeness, and relevance. Provide the ranking as a comma-separated list of indices (0-indexed). Do not add any explanations or any other text other than the comma-separated list.\n\n"
@@ -51,8 +53,10 @@ class ScriptArguments:
         The suffix to add to the prompt for e.g. CoT and MATH (default is "").
     num_samples : int, optional
         The number of samples to generate (default is 5).
-    output_filename : str, optional
-        The name of the output file (default is None).
+    batch_size : int, optional
+        The batch size to use (default is 100).
+    output_dir : str, optional
+        The directory to store the completions (default is None).
     hub_dataset_id : str, optional
         The ID of the dataset on the hub (default is None).
     push_to_hub : bool, optional
@@ -67,7 +71,8 @@ class ScriptArguments:
     dataset_column: str = "prompt"
     prompt_suffix: str = ""
     num_samples: int = None
-    output_filename: str = None
+    batch_size: int = 100
+    output_dir: str = None
     hub_dataset_id: str = None
     push_to_hub: bool = False
     debug: bool = False
@@ -167,34 +172,46 @@ async def process_sample(sample: dict[str, Any], args: ScriptArguments, sampling
     }
 
 
+async def process_batch(batch, args, sampling_args):
+    """Process a batch of samples concurrently."""
+    tasks = [process_sample(sample, args, sampling_args) for sample in batch]
+    return await asyncio.gather(*tasks)
+
+
 async def generate_dataset(args: ScriptArguments, sampling_args: SamplingArguments):
-    """Generate the dataset and save it to a JSONL file."""
+    """Generate the dataset in batches and save it to a JSONL file."""
     dataset = load_dataset(args.dataset_name, split=args.dataset_split, trust_remote_code=True)
     if args.num_samples is not None:
         dataset = dataset.select(range(min(args.num_samples, len(dataset))))
 
-    # List to store the coroutine for each sample
-    tasks = [process_sample(sample, args, sampling_args) for sample in dataset]
-
     model_name = args.model.split("/")[-1]
     config_name = f"{args.dataset_name.replace('/', '_')}--{args.approach}--T{sampling_args.temperature}--N{sampling_args.n}"
-    if args.output_filename is None:
-        args.output_filename = f"{config_name}-completions.jsonl"
+    if args.output_dir is None:
+        args.output_dir = f"data/{args.model}"
 
-    with open(f"data/{args.output_filename}", "w") as f:
-        # Use asyncio.gather to process all samples concurrently
-        for result in tqdm(await asyncio.gather(*tasks)):
-            f.write(json.dumps(result) + "\n")
+    Path(args.output_dir).mkdir(parents=True, exist_ok=True)
+    output_filepath = f"{args.output_dir}/{config_name}.jsonl"
+
+    with open(output_filepath, "w") as f:
+        for i in tqdm_asyncio(range(0, len(dataset), args.batch_size), desc="Processing global progress"):
+            batch = dataset.select(range(i, min(i + args.batch_size, len(dataset))))
+            # Process the batch
+            batch_results = await process_batch(batch, args, sampling_args)
+            # Write each result to the file
+            for result in tqdm(batch_results, desc=f"Processing batch {i // args.batch_size + 1}"):
+                f.write(json.dumps(result) + "\n")
 
     # Push to hub
     if args.push_to_hub:
         if args.hub_dataset_id is None:
             # Set default based on model name
             args.hub_dataset_id = f"{model_name}-optillm-completions"
-        results_ds = load_dataset("json", data_files=f"data/{args.output_filename}", split="train")
+        results_ds = load_dataset("json", data_files=output_filepath, split="train")
+        dataset = dataset.add_column("prompt", results_ds["prompt"])
         dataset = dataset.add_column("optillm_completions", results_ds["results"])
         url = dataset.push_to_hub(args.hub_dataset_id, config_name=config_name, private=True)
         print(f"Pushed dataset to: {url}")
+        Path(output_filepath).unlink()
 
 
 def main():
@@ -209,6 +226,8 @@ def main():
             with ServerContext(ProxyServer, dict(model_path=args.model, approach=args.approach)) as proxy_server:
                 proxy_server.wait()
                 asyncio.run(generate_dataset(args, sampling_args))
+
+    print("Done 🔥!")
 
 
 if __name__ == "__main__":
