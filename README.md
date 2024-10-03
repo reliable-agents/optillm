@@ -213,7 +213,7 @@ python generate_dataset.py \
   --push_to_hub
 ```
 
-Note that some models like Llama3 require a CoT prompt to produce the correct format on MATH. For these cases, use the `--prompt_suffix` argument:
+Note that some models like Llama3 require a CoT prompt to produce the correct format on MATH. For these cases, use the `--prompt_suffix` argument to append an instruction to the prompt:
 
 ```shell
 python generate_dataset.py \
