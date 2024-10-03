@@ -5,6 +5,7 @@ import subprocess
 import time
 
 import requests
+import torch
 
 
 class Server:
@@ -33,11 +34,7 @@ class VLLMServer(Server):
         self.output_file = open(logs_filepath, "w")
 
         self.process = subprocess.Popen(
-            [
-                "vllm",
-                "serve",
-                model_path,
-            ],
+            ["vllm", "serve", model_path, "--tensor-parallel-size", f"{torch.cuda.device_count()}"],
             stdout=self.output_file,
             stderr=self.output_file,
         )

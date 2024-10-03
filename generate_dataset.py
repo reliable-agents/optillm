@@ -187,10 +187,6 @@ async def generate_dataset(args: ScriptArguments, sampling_args: SamplingArgumen
 
     model_name = args.model.split("/")[-1]
     config_name = f"{args.dataset_name.replace('/', '_')}--{args.approach}--T{sampling_args.temperature}--N{sampling_args.n}"
-    if args.output_dir is None:
-        args.output_dir = f"data/{args.model}"
-
-    Path(args.output_dir).mkdir(parents=True, exist_ok=True)
     output_filepath = f"{args.output_dir}/{config_name}.jsonl"
 
     with open(output_filepath, "w") as f:
@@ -219,12 +215,17 @@ def main():
     parser = HfArgumentParser((ScriptArguments, SamplingArguments))
     args, sampling_args = parser.parse_args_into_dataclasses()
 
+    if args.output_dir is None:
+        args.output_dir = f"data/{args.model}"
+
+    Path(args.output_dir).mkdir(parents=True, exist_ok=True)
+
     if args.debug:
         asyncio.run(generate_dataset(args, sampling_args))
     else:
-        with ServerContext(VLLMServer, dict(model_path=args.model)) as vllm_server:
+        with ServerContext(VLLMServer, dict(model_path=args.model, logs_filepath=f"{args.output_dir}/vllm_server.log")) as vllm_server:
             vllm_server.wait()
-            with ServerContext(ProxyServer, dict(model_path=args.model, approach=args.approach)) as proxy_server:
+            with ServerContext(ProxyServer, dict(model_path=args.model, approach=args.approach, logs_filepath=f"{args.output_dir}/proxy_server.log")) as proxy_server:
                 proxy_server.wait()
                 asyncio.run(generate_dataset(args, sampling_args))
 
