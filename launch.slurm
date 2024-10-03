@@ -6,7 +6,9 @@
 #SBATCH --output=/fsx/h4/logs/%x-%j.out
 #SBATCH --err=/fsx/h4/logs/%x-%j.err
 #SBATCH --partition=hopper-prod
-#SBATCH --requeue 
+#SBATCH --requeue
+#SBATCH --mail-type=ALL 
+#SBATCH --mail-user=lewis+hfc@huggingface.co
 
 # Print shell commands and exit immediately if a command exits with a non-zero status
 set -x -e
