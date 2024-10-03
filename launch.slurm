@@ -23,7 +23,7 @@ DATASET_NAME=""
 DATASET_SPLIT="train"
 DATASET_COLUMN="prompt"
 PROMPT_SUFFIX=""
-NUM_SAMPLES=5
+NUM_SAMPLES=""
 N=1
 TEMPERATURE=0.7
 MAX_TOKENS=2048
@@ -49,16 +49,23 @@ done
 # The $MODEL variable is in the form {ORG}/{MODEL_NAME}, so we extract the model name for the dataset ID:
 MODEL_NAME=$(echo $MODEL | cut -d'/' -f2)
 
-python generate_dataset.py \
+CMD="python generate_dataset.py \
   --approach $APPROACH \
   --model $MODEL \
   --dataset_name $DATASET_NAME \
   --dataset_split $DATASET_SPLIT \
   --dataset_column $DATASET_COLUMN \
-  --prompt_suffix "$PROMPT_SUFFIX" \
-  --num_samples $NUM_SAMPLES \
+  --prompt_suffix \"$PROMPT_SUFFIX\" \
   --n $N \
   --temperature $TEMPERATURE \
   --max_tokens $MAX_TOKENS \
   --push_to_hub \
-  --hub_dataset_id reliable-agents/$MODEL_NAME-optillm-completions
+  --hub_dataset_id reliable-agents/$MODEL_NAME-optillm-completions"
+
+# Add the --num_samples argument only if NUM_SAMPLES is not empty
+if [[ -n "$NUM_SAMPLES" ]]; then
+  CMD+=" --num_samples $NUM_SAMPLES"
+fi
+
+# Run the command
+eval $CMD
