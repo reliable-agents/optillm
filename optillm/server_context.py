@@ -116,13 +116,13 @@ class ServerContext:
 
 
 if __name__ == "__main__":
-    with ServerContext(VLLMServer, dict(model_path="Qwen/Qwen2.5-Math-1.5B-Instruct")) as vllm_server:
+    with ServerContext(VLLMServer, dict(model_path="meta-llama/Llama-3.2-1B-Instruct")) as vllm_server:
         vllm_server.wait()
-        print(vllm_server.generate("What is the capital of France?"))
         with ServerContext(
-            ProxyServer, dict(model_path="Qwen/Qwen2.5-Math-1.5B-Instruct", approach="mcts")
+            ProxyServer, dict(model_path="meta-llama/Llama-3.2-1B-Instruct", approach="mcts")
         ) as proxy_server:
             proxy_server.wait()
-            print(proxy_server.generate("What is the capital of France?"))
+            while True:
+                time.sleep(5)
 
             # do your stuff here

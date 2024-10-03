@@ -189,7 +189,7 @@ python generate_dataset.py \
   --num_samples 5
 ```
 
-By default, this generates _one completion per prompt_ and the outputs will be saved to `data/optillm_dataset.jsonl`. If you want to generate multiple completions per prompt (e.g. for preference modelling), run:
+By default, this generates _one completion per prompt_ and the outputs will be saved to `data/completions.jsonl`. If you want to generate multiple completions per prompt (e.g. for preference modelling), use the `--n` argument and run:
 
 ```shell
 python generate_dataset.py \
@@ -201,6 +201,23 @@ python generate_dataset.py \
   --n 2 
 ```
 
+To push the dataset to the Hub, run:
+
+```shell
+python generate_dataset.py \
+  --approach mcts \
+  --model meta-llama/Llama-3.2-1B-Instruct \
+  --dataset_name argilla/magpie-ultra-v0.1 \
+  --dataset_column instruction \
+  --num_samples 5 \
+  --push_to_hub
+```
+
+For all script options, run:
+
+```shell
+python generate_dataset.py -h
+```
 
 ## Implemented techniques
 
