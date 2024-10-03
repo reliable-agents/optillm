@@ -1,4 +1,3 @@
-import argparse
 import asyncio
 import json
 import random
@@ -7,9 +6,29 @@ from typing import Any
 from datasets import load_dataset
 from openai import AsyncOpenAI
 from tqdm import tqdm
+from transformers import HfArgumentParser
 
 from optillm.server_context import ProxyServer, ServerContext, VLLMServer
 
+from dataclasses import dataclass
+
+@dataclass
+class ScriptArguments:
+    approach: str
+    model: str
+    dataset_name: str
+    dataset_split: str = "train"
+    dataset_column: str = "prompt"
+    num_samples: int = 5
+    output_file: str = "completions.jsonl"
+    hub_dataset_id: str = None
+    push_to_hub: bool = False
+
+@dataclass
+class SamplingArguments:
+    n: int = 1
+    temperature: float = 0.7
+    max_tokens: int = 2048
 
 # OptILM approaches
 APPROACHES = [
@@ -29,19 +48,16 @@ APPROACHES = [
 ]
 
 
-async def generate_response(prompt: str, **kwargs) -> dict[str, Any]:
+async def generate_response(prompt: str, args: ScriptArguments, sampling_args: SamplingArguments) -> dict[str, Any]:
     """Generate a response using the specified approach."""
-    approach = kwargs["approach"]
-    temperature = kwargs["temperature"]
-    max_tokens = kwargs["max_tokens"]
-    if approach == "none":
+    if args.approach == "none":
         # Use the base model without any optimization technique
         client = AsyncOpenAI()
         response = await client.chat.completions.create(
-            model=kwargs["model"],
+            model=args.model,
             messages=[{"role": "user", "content": prompt}],
-            temperature=temperature,
-            max_tokens=max_tokens,
+            temperature=sampling_args.temperature,
+            max_tokens=sampling_args.max_tokens,
         )
         return {
             "content": response.choices[0].message.content,
@@ -51,9 +67,10 @@ async def generate_response(prompt: str, **kwargs) -> dict[str, Any]:
         # Use OptILM with the specified approach
         client = AsyncOpenAI(api_key="none", base_url="http://localhost:8080/v1")
         response = await client.chat.completions.create(
-            model=f"{approach}-{kwargs['model']}",  # Assuming OptILM uses this naming convention
+            model=f"{args.approach}-{args.model}",  # Assuming OptILM uses this naming convention
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=max_tokens,
+            temperature=sampling_args.temperature,
+            max_tokens=sampling_args.max_tokens,
         )
         return {
             "content": response.choices[0].message.content,
@@ -76,17 +93,16 @@ async def rank_responses(prompt: str, responses: list[dict[str, Any]]) -> list[i
     return [int(idx) for idx in ranking_str.split(",")]
 
 
-async def process_sample(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
+async def process_sample(sample: dict[str, Any], args: ScriptArguments, sampling_args: SamplingArguments) -> dict[str, Any]:
     """Process a single sample from the dataset."""
-    prompt = sample[kwargs["dataset_column"]]
-    approach = kwargs["approach"]
+    prompt = sample[args.dataset_column]
     results = []
 
-    for _ in range(kwargs["n"]):
+    for _ in range(sampling_args.n):
         response = await generate_response(
-            prompt, **kwargs
+            prompt, args, sampling_args
         )
-        results.append({"approach": approach, **response})
+        results.append({"approach": args.approach, **response})
 
     random.shuffle(results)
     # Rank the responses
@@ -104,50 +120,39 @@ async def process_sample(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
     }
 
 
-async def generate_dataset(dataset_name: str, output_file: str, **kwargs):
+async def generate_dataset(args: ScriptArguments, sampling_args: SamplingArguments):
     """Generate the dataset and save it to a JSONL file."""
-    dataset = load_dataset(dataset_name, split=f"{kwargs.get('dataset_split')}")
-    dataset = dataset.select(range(kwargs.get("num_samples")))
-
-    process_kwargs = {k: v for k, v in kwargs.items() if k not in ["dataset_name", "dataset_split", "output_file"]}
+    dataset = load_dataset(args.dataset_name, split=args.dataset_split)
+    dataset = dataset.select(range(min(args.num_samples, len(dataset))))
 
     # List to store the coroutine for each sample
-    tasks = [process_sample(sample, **process_kwargs) for sample in dataset]
+    tasks = [process_sample(sample, args, sampling_args) for sample in dataset]
 
-    with open(f"data/{output_file}", "w") as f:
+    with open(f"data/{args.output_file}", "w") as f:
         # Use asyncio.gather to process all samples concurrently
         for result in tqdm(await asyncio.gather(*tasks)):
             f.write(json.dumps(result) + "\n")
 
     # Push to hub
-    if kwargs.get("push_to_hub", True) and kwargs.get("hub_dataset_id") is not None:
-        results_ds = load_dataset("json", data_files=f"data/{output_file}", split="train")
+    if args.push_to_hub:
+        if args.hub_dataset_id is None:
+            # Set default based on model name
+            args.hub_dataset_id = f"{args.model.split('/')[-1]}-completions"
+        revision = f"{args.approach}"
+        results_ds = load_dataset("json", data_files=f"data/{args.output_file}", split="train")
         dataset = dataset.add_column("optillm_completions", results_ds["results"])
-        dataset.push_to_hub(kwargs.get("hub_dataset_id"), private=True)
+        dataset.push_to_hub(args.hub_dataset_id, revision=revision, private=True)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate OptILM dataset")
-    parser.add_argument("--approach", type=str, default="mcts", help="optillm approach")
-    parser.add_argument("--model", type=str, help="Model name")
-    parser.add_argument("--dataset_name", type=str, help="Hub dataset repo ID")
-    parser.add_argument("--dataset_split", type=str, default="train", help="Dataset split")
-    parser.add_argument("--dataset_column", type=str, default="prompt", help="Column name which contains the prompts")
-    parser.add_argument("--num_samples", type=int, default=5, help="Number of samples to process")
-    parser.add_argument("--output_file", type=str, default="optillm_dataset.jsonl", help="Output file path")
-    parser.add_argument("--hub_dataset_id", type=str, default=None, help="Hugging Face dataset ID to push results to")
-    parser.add_argument("--push_to_hub", action="store_true", help="Push results to Hugging Face dataset")
-    # OpenAI API parameters
-    parser.add_argument("--n", type=int, default=1, help="How many completions to generate for each prompt")
-    parser.add_argument("--temperature", type=float, default=0.7, help="Temperature for sampling")
-    parser.add_argument("--max_tokens", type=int, default=2048, help="Maximum number of tokens for completions")
-    args = parser.parse_args()
+    parser = HfArgumentParser((ScriptArguments, SamplingArguments))
+    args, sampling_args = parser.parse_args_into_dataclasses()
 
     with ServerContext(VLLMServer, dict(model_path=args.model)) as vllm_server:
         vllm_server.wait()
         with ServerContext(ProxyServer, dict(model_path=args.model, approach=args.approach)) as proxy_server:
             proxy_server.wait()
-            asyncio.run(generate_dataset(**vars(args)))
+            asyncio.run(generate_dataset(args, sampling_args))
 
 
 if __name__ == "__main__":
