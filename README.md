@@ -235,6 +235,27 @@ For all script options, run:
 python generate_dataset.py -h
 ```
 
+#### Debugging and development
+
+To iterate fast on improvements to `generate_dataset.py`, it is best to decouple the vLLM server startup from the data generation process. To achieve this, first run the vLLM server and optillm proxy with:
+
+```shell
+python optillm/server_context.py --model_path meta-llama/Llama-3.2-1B-Instruct
+```
+
+Then run the data generation script with `--debug` in a separate terminal:
+
+```shell
+python generate_dataset.py   \
+  --approach mcts \
+  --model meta-llama/Llama-3.2-1B-Instruct \
+  --dataset_name argilla/magpie-ultra-v0.1 \
+  --dataset_column instruction \
+  --num_samples 5 \
+  --debug
+```
+
+
 #### Launch a Slurm job
 
 To generate a synthetic dataset with Slurm on the Hugging Face cluster, run:
