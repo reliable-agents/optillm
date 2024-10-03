@@ -1,3 +1,4 @@
+import argparse
 import os
 import signal
 import subprocess
@@ -26,10 +27,9 @@ class Server:
 
 class VLLMServer(Server):
     def __init__(self, model_path="") -> None:
-        print(f"Starting the VLLM server {model_path=}")
+        print(f"Starting the VLLM server with {model_path=}")
         self.is_ready = False
         self.model_path = model_path
-        # we have to apply the chat template ourselves due to how the binary search is run on parts of sequences
         self.output_file = open("vllm_server.log", "w")
 
         self.process = subprocess.Popen(
@@ -59,12 +59,11 @@ class VLLMServer(Server):
 
 class ProxyServer(Server):
     def __init__(self, model_path="", approach="", return_full_response=True) -> None:
-        print(f"Starting the ProxyServer approach {approach=}")
+        print(f"Starting the ProxyServer with {approach=}")
         self.is_ready = False
         self.model_path = model_path
         self.approach = approach
         self.return_full_response = return_full_response
-        # we have to apply the chat template ourselves due to how the binary search is run on parts of sequences
         self.output_file = open("proxy_server.log", "w")
 
         self.process = subprocess.Popen(
@@ -106,23 +105,25 @@ class ServerContext:
         return self.server
 
     def __exit__(self, exc_type, exc_value, traceback):
-        print("exiting the context")
-        # Code to release the resources or handle exceptions
+        print("Exiting the context")
         if exc_type:
             print(f"Exception occurred: {exc_value}")
-        # Return True if the exception is handled, False otherwise
         self.server.close()
         return False
 
 
 if __name__ == "__main__":
-    with ServerContext(VLLMServer, dict(model_path="meta-llama/Llama-3.2-1B-Instruct")) as vllm_server:
+    parser = argparse.ArgumentParser(description="Start servers with specified model and approach.")
+    parser.add_argument("--model_path", type=str, required=True, help="The path to the model.")
+    parser.add_argument("--approach", type=str, default="mcts", help="The approach for the proxy server.")
+
+    args = parser.parse_args()
+
+    with ServerContext(VLLMServer, dict(model_path=args.model_path)) as vllm_server:
         vllm_server.wait()
-        with ServerContext(
-            ProxyServer, dict(model_path="meta-llama/Llama-3.2-1B-Instruct", approach="mcts")
-        ) as proxy_server:
+        with ServerContext(ProxyServer, dict(model_path=args.model_path, approach=args.approach)) as proxy_server:
             proxy_server.wait()
             while True:
                 time.sleep(5)
 
-            # do your stuff here
+            # Do your stuff here
