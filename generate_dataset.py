@@ -47,6 +47,8 @@ class ScriptArguments:
         The split of the dataset (default is "train").
     dataset_column : str, optional
         The column of the dataset with the prompts (default is "prompt").
+    prompt_suffix : str, optional
+        The suffix to add to the prompt for e.g. CoT and MATH (default is "").
     num_samples : int, optional
         The number of samples to generate (default is 5).
     output_filename : str, optional
@@ -63,6 +65,7 @@ class ScriptArguments:
     dataset_name: str
     dataset_split: str = "train"
     dataset_column: str = "prompt"
+    prompt_suffix: str = ""
     num_samples: int = 5
     output_filename: str = None
     hub_dataset_id: str = None
@@ -108,7 +111,7 @@ async def generate_response(prompt: str, args: ScriptArguments, sampling_args: S
         client = AsyncOpenAI(api_key="none", base_url="http://localhost:8080/v1")
         response = await client.chat.completions.create(
             model=f"{args.approach}-{args.model}",  # Assuming OptILM uses this naming convention
-            messages=[{"role": "user", "content": prompt}],
+            messages=[{"role": "user", "content": prompt + args.prompt_suffix}],
             temperature=sampling_args.temperature,
             max_tokens=sampling_args.max_tokens,
         )
@@ -166,15 +169,16 @@ async def process_sample(sample: dict[str, Any], args: ScriptArguments, sampling
 
 async def generate_dataset(args: ScriptArguments, sampling_args: SamplingArguments):
     """Generate the dataset and save it to a JSONL file."""
-    dataset = load_dataset(args.dataset_name, split=args.dataset_split)
+    dataset = load_dataset(args.dataset_name, split=args.dataset_split, trust_remote_code=True)
     dataset = dataset.select(range(min(args.num_samples, len(dataset))))
 
     # List to store the coroutine for each sample
     tasks = [process_sample(sample, args, sampling_args) for sample in dataset]
 
     model_name = args.model.split("/")[-1]
+    config_name = f"{args.dataset_name.replace('/', '_')}--{args.approach}--T{sampling_args.temperature}--N{sampling_args.n}"
     if args.output_filename is None:
-        args.output_filename = f"{args.approach}-{model_name}-completions.jsonl"
+        args.output_filename = f"{config_name}-completions.jsonl"
 
     with open(f"data/{args.output_filename}", "w") as f:
         # Use asyncio.gather to process all samples concurrently
@@ -186,7 +190,6 @@ async def generate_dataset(args: ScriptArguments, sampling_args: SamplingArgumen
         if args.hub_dataset_id is None:
             # Set default based on model name
             args.hub_dataset_id = f"{model_name}-optillm-completions"
-        config_name = f"{args.approach}-T{sampling_args.temperature}-N{sampling_args.n}"
         results_ds = load_dataset("json", data_files=f"data/{args.output_filename}", split="train")
         dataset = dataset.add_column("optillm_completions", results_ds["results"])
         url = dataset.push_to_hub(args.hub_dataset_id, config_name=config_name, private=True)
