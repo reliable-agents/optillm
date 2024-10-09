@@ -4,6 +4,7 @@ import random
 from typing import Any
 
 from datasets import load_dataset
+from datetime import datetime
 from openai import AsyncOpenAI
 from tqdm import tqdm
 from transformers import HfArgumentParser
@@ -186,7 +187,10 @@ async def generate_dataset(args: ScriptArguments, sampling_args: SamplingArgumen
         dataset = dataset.select(range(min(args.num_samples, len(dataset))))
 
     model_name = args.model.split("/")[-1]
-    config_name = f"{args.dataset_name.replace('/', '_')}--{args.approach}--T{sampling_args.temperature}--N{sampling_args.n}"
+    # Get current date and time
+    now = datetime.now()
+    dt_string = now.strftime("%Y-%m-%dT%H:%M:%S")
+    config_name = f"{args.dataset_name.replace('/', '_')}--{args.approach}--T{sampling_args.temperature}--N{sampling_args.n}_{dt_string}"
     output_filepath = f"{args.output_dir}/{config_name}.jsonl"
 
     with open(output_filepath, "w") as f:
@@ -204,8 +208,10 @@ async def generate_dataset(args: ScriptArguments, sampling_args: SamplingArgumen
             # Set default based on model name
             args.hub_dataset_id = f"{model_name}-optillm-completions"
         results_ds = load_dataset("json", data_files=output_filepath, split="train")
+        dataset = dataset.add_column("system_prompt", [args.system_prompt] * len(dataset))
         dataset = dataset.add_column("prompt", results_ds["prompt"])
         dataset = dataset.add_column("optillm_completions", results_ds["results"])
+        dataset = dataset.map(lambda x: {"pred": x['optillm_completions'][0]['content']})
         url = dataset.push_to_hub(args.hub_dataset_id, config_name=config_name, private=True)
         print(f"Pushed dataset to: {url}")
         Path(output_filepath).unlink()
