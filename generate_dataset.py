@@ -49,7 +49,7 @@ class ScriptArguments:
         The split of the dataset (default is "train").
     dataset_column : str, optional
         The column of the dataset with the prompts (default is "prompt").
-    prompt_suffix : str, optional
+    system_prompt : str, optional
         The suffix to add to the prompt for e.g. CoT and MATH (default is "").
     num_samples : int, optional
         The number of samples to generate (default is 5).
@@ -69,7 +69,7 @@ class ScriptArguments:
     dataset_name: str
     dataset_split: str = "train"
     dataset_column: str = "prompt"
-    prompt_suffix: str = ""
+    system_prompt: str = ""
     num_samples: int = None
     batch_size: int = 100
     output_dir: str = None
@@ -117,7 +117,7 @@ async def generate_response(prompt: str, args: ScriptArguments, sampling_args: S
         client = AsyncOpenAI(api_key="none", base_url="http://localhost:8080/v1")
         response = await client.chat.completions.create(
             model=f"{args.approach}-{args.model}",  # Assuming OptILM uses this naming convention
-            messages=[{"role": "user", "content": prompt + args.prompt_suffix}],
+            messages=[{"role": "user", "content": prompt + args.system_prompt}],
             temperature=sampling_args.temperature,
             max_tokens=sampling_args.max_tokens,
         )

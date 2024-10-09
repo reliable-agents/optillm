@@ -22,7 +22,7 @@ MODEL=""
 DATASET_NAME=""
 DATASET_SPLIT="train"
 DATASET_COLUMN="prompt"
-PROMPT_SUFFIX=""
+SYSTEM_PROMPT=""
 NUM_SAMPLES=""
 N=1
 TEMPERATURE=0.7
@@ -36,7 +36,7 @@ while [[ "$#" -gt 0 ]]; do
         --dataset_name) DATASET_NAME="$2"; shift ;;
         --dataset_split) DATASET_SPLIT="$2"; shift ;;
         --dataset_column) DATASET_COLUMN="$2"; shift ;;
-        --prompt_suffix) PROMPT_SUFFIX="${2:-}"; shift ;;
+        --system_prompt) SYSTEM_PROMPT="${2:-}"; shift ;;
         --num_samples) NUM_SAMPLES="$2"; shift ;;
         --n) N="$2"; shift ;;
         --temperature) TEMPERATURE="$2"; shift ;;
@@ -55,7 +55,7 @@ CMD="python generate_dataset.py \
   --dataset_name $DATASET_NAME \
   --dataset_split $DATASET_SPLIT \
   --dataset_column $DATASET_COLUMN \
-  --prompt_suffix \"$PROMPT_SUFFIX\" \
+  --system_prompt \"$SYSTEM_PROMPT\" \
   --n $N \
   --temperature $TEMPERATURE \
   --max_tokens $MAX_TOKENS \

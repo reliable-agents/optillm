@@ -215,7 +215,7 @@ python generate_dataset.py \
 
 The results will be visible in the `prompt` and `optillm_completions` columns of the dataset.
 
-Note that some models like Llama3 require a CoT prompt to produce the correct format on MATH. For these cases, use the `--prompt_suffix` argument to append an instruction to the prompt:
+Note that some models like Llama3 require a CoT prompt to produce the correct format on MATH. For these cases, use the `--system_prompt` argument to provide a custom system prompt to the model:
 
 ```shell
 python generate_dataset.py \
@@ -224,9 +224,12 @@ python generate_dataset.py \
   --dataset_name lighteval/MATH \
   --dataset_split test \
   --dataset_column problem \
-  --prompt_suffix '\nPlease reason step by step and put your final answer within \\boxed{{}}.' \
+  --system_prompt 'Solve the following math problem step-by-step.\nSimplify your answer as much as possible. Present your final answer as \\boxed{Your Answer}.' \
   --num_samples 5
 ```
+
+> [!WARNING]
+> The choice of system prompt can have a large impact on the ability of the model to emit an "boxed" answer that can be parsed correctly! The propmt above works quite well for Llama models.
 
 
 For all script options, run:
