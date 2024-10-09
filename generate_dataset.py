@@ -189,8 +189,8 @@ async def generate_dataset(args: ScriptArguments, sampling_args: SamplingArgumen
     model_name = args.model.split("/")[-1]
     # Get current date and time
     now = datetime.now()
-    dt_string = now.strftime("%Y-%m-%dT%H:%M:%S")
-    config_name = f"{args.dataset_name.replace('/', '_')}--{args.approach}--T{sampling_args.temperature}--N{sampling_args.n}_{dt_string}"
+    dt_string = now.strftime("%Y-%m-%dT%H-%M-%S")
+    config_name = f"{args.dataset_name.replace('/', '_')}--{args.approach}--T{sampling_args.temperature}--N{sampling_args.n}__{dt_string}"
     output_filepath = f"{args.output_dir}/{config_name}.jsonl"
 
     with open(output_filepath, "w") as f:
