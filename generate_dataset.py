@@ -103,9 +103,13 @@ async def generate_response(prompt: str, args: ScriptArguments, sampling_args: S
         # Use the base model without any optimization technique
         print(f"Calling OpenAI API with model: {args.model}")
         client = AsyncOpenAI()
+        messages = [{"role": "user", "content": prompt}]
+        # Prepend system prompt if specified
+        if args.system_prompt:
+            messages.insert(0, {"role": "system", "content": args.system_prompt})
         response = await client.chat.completions.create(
             model=args.model,
-            messages=[{"role": "user", "content": prompt}],
+            messages=messages,
             temperature=sampling_args.temperature,
             max_tokens=sampling_args.max_tokens,
         )
@@ -116,9 +120,13 @@ async def generate_response(prompt: str, args: ScriptArguments, sampling_args: S
     else:
         # Use OptILM with the specified approach
         client = AsyncOpenAI(api_key="none", base_url="http://localhost:8080/v1")
+        messages = [{"role": "user", "content": prompt}]
+        # Prepend system prompt if specified
+        if args.system_prompt:
+            messages.insert(0, {"role": "system", "content": args.system_prompt})
         response = await client.chat.completions.create(
             model=f"{args.approach}-{args.model}",  # Assuming OptILM uses this naming convention
-            messages=[{"role": "user", "content": prompt + args.system_prompt}],
+            messages=messages,
             temperature=sampling_args.temperature,
             max_tokens=sampling_args.max_tokens,
         )
