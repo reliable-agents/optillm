@@ -27,7 +27,7 @@ from optillm.rstar import RStar
 from optillm.rto import round_trip_optimization
 from optillm.self_consistency import advanced_self_consistency_approach
 from optillm.z3_solver import Z3SolverSystem
-
+from vllm import SamplingParams
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -77,6 +77,8 @@ server_config = {
     "optillm_api_key": "",
     "return_full_response": False,
     "port": 8000,
+    "temperature": 0.7,
+    "max_tokens": 2048,
 }
 
 # List of known approaches
@@ -149,6 +151,7 @@ def parse_combined_approach(model: str, known_approaches: list, plugin_approache
 
 
 def execute_single_approach(approach, system_prompt, initial_query, client, model):
+    sampling_params = SamplingParams(temperature=server_config["temperature"], max_tokens=server_config["max_tokens"])
     if approach in known_approaches:
         # Execute known approaches
         if approach == "mcts":
@@ -157,6 +160,7 @@ def execute_single_approach(approach, system_prompt, initial_query, client, mode
                 initial_query,
                 client,
                 model,
+                sampling_params,
                 server_config["mcts_simulations"],
                 server_config["mcts_exploration"],
                 server_config["mcts_depth"],
@@ -438,6 +442,8 @@ def parse_args():
             "Return the full response including the CoT with <thinking> tags",
         ),
         ("--port", "OPTILLM_PORT", int, 8080, "Specify the port to run the proxy"),
+        ("--temperature", "OPTILLM_TEMPERATURE", float, 0.7, "Temperature for sampling"),
+        ("--max-tokens", "OPTILLM_MAX_TOKENS", int, 2048, "Maximum tokens for sampling"),
     ]
 
     for arg, env, type_, default, help_text, *extra in args_env:

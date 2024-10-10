@@ -3,6 +3,7 @@ import random
 
 import networkx as nx
 import numpy as np
+from vllm import SamplingParams
 
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ class MCTSNode:
 
 
 class MCTS:
-    def __init__(self, simulation_depth, exploration_weight, client, model):
+    def __init__(self, simulation_depth, exploration_weight, client, model, sampling_params):
         self.simulation_depth = simulation_depth
         self.exploration_weight = exploration_weight
         self.root = None
@@ -38,6 +39,7 @@ class MCTS:
         self.node_labels = {}
         self.client = client
         self.model = model
+        self.sampling_params = sampling_params
         self.completion_tokens = 0
 
     def select(self, node: MCTSNode) -> MCTSNode:
@@ -126,9 +128,9 @@ class MCTS:
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
-            max_tokens=2048,  # Lowered for testing as the max context length of Qwen/Qwen2.5-Math-1.5B-Instruct is 4096 tokens
+            max_tokens=self.sampling_params.max_tokens,
             n=n,
-            temperature=1,
+            temperature=self.sampling_params.temperature,
         )
         completions = [choice.message.content.strip() for choice in response.choices]
         self.completion_tokens += response.usage.completion_tokens
@@ -151,7 +153,7 @@ class MCTS:
 
         logger.info("Requesting next user query from the model")
         response = self.client.chat.completions.create(
-            model=self.model, messages=messages, max_tokens=1024, n=1, temperature=1
+            model=self.model, messages=messages, max_tokens=self.sampling_params.max_tokens, n=1, temperature=self.sampling_params.temperature
         )
 
         next_query = response.choices[0].message.content
@@ -194,6 +196,7 @@ def chat_with_mcts(
     initial_query: str,
     client,
     model: str,
+    sampling_params: SamplingParams,
     num_simulations: int = 2,
     exploration_weight: float = 0.2,
     simulation_depth: int = 1,
@@ -202,7 +205,8 @@ def chat_with_mcts(
     logger.info(
         f"Parameters: num_simulations={num_simulations}, exploration_weight={exploration_weight}, simulation_depth={simulation_depth}"
     )
-    mcts = MCTS(simulation_depth=simulation_depth, exploration_weight=exploration_weight, client=client, model=model)
+    mcts = MCTS(simulation_depth=simulation_depth, exploration_weight=exploration_weight, client=client, model=model, sampling_params=sampling_params)
+    logger.info(f"System prompt: {system_prompt}")
     initial_state = DialogueState(system_prompt, [], initial_query)
     logger.info(f"Initial query: {initial_query}")
     final_state = mcts.search(initial_state, num_simulations)

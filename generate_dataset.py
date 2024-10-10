@@ -239,7 +239,7 @@ def main():
     else:
         with ServerContext(VLLMServer, dict(model_path=args.model, logs_filepath=f"{args.output_dir}/vllm_server.log")) as vllm_server:
             vllm_server.wait()
-            with ServerContext(ProxyServer, dict(model_path=args.model, approach=args.approach, logs_filepath=f"{args.output_dir}/proxy_server.log")) as proxy_server:
+            with ServerContext(ProxyServer, dict(model_path=args.model, approach=args.approach, temperature=sampling_args.temperature, max_tokens=sampling_args.max_tokens, logs_filepath=f"{args.output_dir}/proxy_server.log")) as proxy_server:
                 proxy_server.wait()
                 asyncio.run(generate_dataset(args, sampling_args))
 

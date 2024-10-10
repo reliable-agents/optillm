@@ -189,7 +189,7 @@ python generate_dataset.py \
   --num_samples 5
 ```
 
-By default, this generates _one completion per prompt_ and the outputs will be saved to `data/completions.jsonl`. If you want to generate multiple completions per prompt (e.g. for preference modelling), use the `--n` argument and run:
+By default, this generates _one completion per prompt_ and the outputs will be saved to `data/{model}/`. If you want to generate multiple completions per prompt (e.g. for preference modelling), use the `--n` argument and run:
 
 ```shell
 python generate_dataset.py \
@@ -224,12 +224,12 @@ python generate_dataset.py \
   --dataset_name lighteval/MATH \
   --dataset_split test \
   --dataset_column problem \
-  --system_prompt 'Solve the following math problem step-by-step.\nSimplify your answer as much as possible. Present your final answer as \\boxed{Your Answer}.' \
+  --system_prompt "Solve the following math problem step-by-step. Simplify your answer as much as possible. Present your final answer as \boxed{Your Answer}." \
   --num_samples 5
 ```
 
 > [!WARNING]
-> The choice of system prompt can have a large impact on the ability of the model to emit an "boxed" answer that can be parsed correctly! The propmt above works quite well for Llama models.
+> The choice of system prompt can have a large impact on the ability of the model to emit an "boxed" answer that can be parsed correctly! The prompt above works quite well for Llama models.
 
 
 For all script options, run:
