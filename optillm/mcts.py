@@ -6,6 +6,8 @@ import numpy as np
 from vllm import SamplingParams
 
 
+JUDGE_PROMPT = "Evaluate the quality of this conversation on a scale from 0 to 1, where 0 is poor and 1 is excellent. Consider factors such as coherence, relevance, and engagement. Respond with only a number."
+
 logger = logging.getLogger(__name__)
 
 
@@ -181,7 +183,7 @@ class MCTS:
         messages.append(
             {
                 "role": "user",
-                "content": "Evaluate the quality of this conversation on a scale from 0 to 1, where 0 is poor and 1 is excellent. Consider factors such as coherence, relevance, and engagement. Respond with only a number.",
+                "content": JUDGE_PROMPT,
             }
         )
 
