@@ -10,6 +10,7 @@ import secrets
 
 from flask import Flask, Response, jsonify, request
 from openai import AzureOpenAI, OpenAI
+from vllm import SamplingParams
 
 # Import the LiteLLM wrapper
 from litellm_wrapper import LiteLLMWrapper
@@ -27,7 +28,7 @@ from optillm.rstar import RStar
 from optillm.rto import round_trip_optimization
 from optillm.self_consistency import advanced_self_consistency_approach
 from optillm.z3_solver import Z3SolverSystem
-from vllm import SamplingParams
+
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")

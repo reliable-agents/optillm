@@ -56,7 +56,13 @@ class VLLMServer(Server):
 
 class ProxyServer(Server):
     def __init__(
-        self, model_path="", approach="", temperature=0.7, max_tokens=2048, return_full_response=True, logs_filepath: str = "proxy_server.log"
+        self,
+        model_path="",
+        approach="",
+        temperature=0.7,
+        max_tokens=2048,
+        return_full_response=True,
+        logs_filepath: str = "proxy_server.log",
     ) -> None:
         print(f"Starting the ProxyServer with {approach=}")
         self.is_ready = False

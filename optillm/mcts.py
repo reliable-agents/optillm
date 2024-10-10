@@ -153,7 +153,11 @@ class MCTS:
 
         logger.info("Requesting next user query from the model")
         response = self.client.chat.completions.create(
-            model=self.model, messages=messages, max_tokens=self.sampling_params.max_tokens, n=1, temperature=self.sampling_params.temperature
+            model=self.model,
+            messages=messages,
+            max_tokens=self.sampling_params.max_tokens,
+            n=1,
+            temperature=self.sampling_params.temperature,
         )
 
         next_query = response.choices[0].message.content
@@ -205,7 +209,13 @@ def chat_with_mcts(
     logger.info(
         f"Parameters: num_simulations={num_simulations}, exploration_weight={exploration_weight}, simulation_depth={simulation_depth}"
     )
-    mcts = MCTS(simulation_depth=simulation_depth, exploration_weight=exploration_weight, client=client, model=model, sampling_params=sampling_params)
+    mcts = MCTS(
+        simulation_depth=simulation_depth,
+        exploration_weight=exploration_weight,
+        client=client,
+        model=model,
+        sampling_params=sampling_params,
+    )
     logger.info(f"System prompt: {system_prompt}")
     initial_state = DialogueState(system_prompt, [], initial_query)
     logger.info(f"Initial query: {initial_query}")
