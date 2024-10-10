@@ -43,7 +43,7 @@ class VLLMServer(Server):
         if self.is_ready:
             return
         while True:
-            time.sleep(5)
+            time.sleep(15)
             try:
                 response = requests.get("http://0.0.0.0:8000/health")
                 if response.status_code == 200:
@@ -51,7 +51,7 @@ class VLLMServer(Server):
                     self.is_ready = True
                     return
             except requests.exceptions.ConnectionError:
-                print("VLLMServer is not ready yet, waiting for 5 seconds")
+                print("VLLMServer is not ready yet, waiting for 15 seconds")
 
 
 class ProxyServer(Server):

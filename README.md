@@ -186,6 +186,8 @@ python generate_dataset.py \
   --model meta-llama/Llama-3.2-1B-Instruct \
   --dataset_name argilla/magpie-ultra-v0.1 \
   --dataset_column instruction \
+  --temperature 0.8 \
+  --max_tokens 4096 \
   --num_samples 5
 ```
 
@@ -197,6 +199,8 @@ python generate_dataset.py \
   --model meta-llama/Llama-3.2-1B-Instruct \
   --dataset_name argilla/magpie-ultra-v0.1 \
   --dataset_column instruction \
+  --temperature 0.8 \
+  --max_tokens 4096 \
   --num_samples 5 \
   --n 2 
 ```
@@ -209,6 +213,8 @@ python generate_dataset.py \
   --model meta-llama/Llama-3.2-1B-Instruct \
   --dataset_name argilla/magpie-ultra-v0.1 \
   --dataset_column instruction \
+  --temperature 0.8 \
+  --max_tokens 4096 \
   --num_samples 5 \
   --push_to_hub
 ```
@@ -224,7 +230,9 @@ python generate_dataset.py \
   --dataset_name lighteval/MATH \
   --dataset_split test \
   --dataset_column problem \
-  --system_prompt "Solve the following math problem step-by-step. Simplify your answer as much as possible. Present your final answer as \boxed{Your Answer}." \
+  --system_prompt "Solve the following math problem step-by-step. Simplify your answer as much as possible. Present your final answer as \\boxed{Your Answer}." \
+  --temperature 0.8 \
+  --max_tokens 4096 \
   --num_samples 5
 ```
 

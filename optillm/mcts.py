@@ -166,7 +166,11 @@ class MCTS:
         return DialogueState(state.system_prompt, new_history, next_query)
 
     def is_terminal(self, state: DialogueState) -> bool:
-        is_terminal = len(state.conversation_history) > 10 or "goodbye" in state.current_query.lower()
+        is_terminal = (
+            len(state.conversation_history) > 10
+            or "goodbye" in state.current_query.lower()
+            or "boxed{" in state.current_query.lower()
+        )
         logger.info(f"Checking if state is terminal: {is_terminal}")
         return is_terminal
 
